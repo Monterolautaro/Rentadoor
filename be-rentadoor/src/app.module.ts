@@ -1,8 +1,6 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
@@ -12,7 +10,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     }),
     SupabaseModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
