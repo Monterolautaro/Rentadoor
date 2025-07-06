@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Loader2, MailCheck, Copy } from 'lucide-react';
+import axios from 'axios';
 
 const PasswordStrengthIndicator = ({ password }) => {
   const validatePassword = (password) => {
@@ -71,6 +72,8 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
   const [confirmationLink, setConfirmationLink] = useState('');
   const { toast } = useToast();
 
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3001/api';
+
   const validatePassword = (password) => {
     const errors = [];
     if (password.length < 8) errors.push('Mínimo 8 caracteres.');
@@ -86,7 +89,7 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrors({});
@@ -107,34 +110,41 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
     }
 
     try {
-      const existingUsers = JSON.parse(localStorage.getItem('users_rentadoor')) || [];
-      if (existingUsers.some(user => user.email === formData.email)) {
-        toast({ title: 'Error', description: 'Este correo ya está registrado.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
-      }
-
-      const confirmationToken = crypto.randomUUID();
-      const link = `${window.location.origin}/confirmar-email/${confirmationToken}`;
-      setConfirmationLink(link);
-
-      const newUser = { 
-        id: crypto.randomUUID(),
+      const response = await axios.post(`${API_URL}/auth/register`, {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
-        verified: false,
-        identityStatus: 'No Verificada',
-        confirmationToken: confirmationToken
-      };
+      });
 
-      existingUsers.push(newUser);
-      localStorage.setItem('users_rentadoor', JSON.stringify(existingUsers));
-      
+      // Guardar token y datos del usuario si el registro incluye login automático
+      if (response.data.token) {
+        localStorage.setItem('authToken_rentadoor', response.data.token);
+        localStorage.setItem('currentUser_rentadoor', JSON.stringify(response.data.user));
+        window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
+      }
+
+      // Si el servidor devuelve un enlace de confirmación, usarlo
+      if (response.data.confirmationLink) {
+        setConfirmationLink(response.data.confirmationLink);
+      } else {
+        // Crear enlace local como fallback
+        const confirmationToken = response.data.confirmationToken || crypto.randomUUID();
+        const link = `${window.location.origin}/confirmar-email/${confirmationToken}`;
+        setConfirmationLink(link);
+      }
+
       setIsSubmitted(true);
+      toast({
+        title: '¡Registro exitoso!',
+        description: 'Tu cuenta ha sido creada. Revisa tu email para confirmar tu cuenta.',
+      });
     } catch (error) {
-      toast({ title: 'Error', description: 'No se pudo completar el registro.', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: error.response?.data?.message || 'No se pudo completar el registro.', 
+        variant: 'destructive' 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -177,60 +187,136 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
               <form onSubmit={handleSubmit} className="space-y-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="name">Nombre Completo</Label>
-                  <Input id="name" value={formData.name} onChange={handleInputChange} placeholder="Tu nombre completo" />
+                  <Input 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleInputChange} 
+                    placeholder="Tu nombre completo"
+                    disabled={isLoading}
+                  />
                   {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    placeholder="tu@email.com"
+                    disabled={isLoading}
+                  />
                   {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                 </div>
                  <div className="space-y-1">
                   <Label htmlFor="phone">Teléfono</Label>
-                  <Input id="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="Tu número de teléfono" />
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    value={formData.phone} 
+                    onChange={handleInputChange} 
+                    placeholder="Tu número de teléfono"
+                    disabled={isLoading}
+                  />
                   {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
-                    <Input id="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} placeholder="Crea una contraseña segura"/>
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500">
+                    <Input 
+                      id="password" 
+                      type={showPassword ? 'text' : 'password'} 
+                      value={formData.password} 
+                      onChange={handleInputChange} 
+                      placeholder="Crea una contraseña segura"
+                      disabled={isLoading}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)} 
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500"
+                      disabled={isLoading}
+                    >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                   {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-                   <PasswordStrengthIndicator password={formData.password} />
+                  <PasswordStrengthIndicator password={formData.password} />
+                  {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-                  <Input id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} placeholder="Repite tu contraseña"/>
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={formData.confirmPassword} 
+                    onChange={handleInputChange} 
+                    placeholder="Repite tu contraseña"
+                    disabled={isLoading}
+                  />
                   {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={isLoading} className="w-full bg-slate-800 hover:bg-slate-700">
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Crear Cuenta'}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-slate-800 hover:bg-slate-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creando cuenta...
+                      </>
+                    ) : (
+                      'Crear Cuenta'
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
             </motion.div>
           ) : (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8 px-4">
-                <MailCheck className="mx-auto h-16 w-16 text-green-500" />
-                <DialogTitle className="text-2xl mt-4">¡Un último paso!</DialogTitle>
-                <DialogDescription className="mt-2 mb-2">
-                    Te hemos enviado un correo a <strong>{formData.email}</strong>.
+            <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-slate-800">¡Cuenta Creada!</DialogTitle>
+                <DialogDescription>
+                  Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta.
                 </DialogDescription>
-                 <div className="mt-4 text-sm text-center text-slate-600">
-                  <p className="font-semibold">Simulación de Email:</p>
-                  <p className="mb-2">Copia y pega este enlace en tu navegador para activar tu cuenta.</p>
-                  <div className="flex items-center gap-2 p-2 bg-slate-100 rounded-md">
-                    <Input readOnly value={confirmationLink} className="bg-white text-xs select-all"/>
-                    <Button variant="outline" size="icon" onClick={handleCopyLink}>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <MailCheck className="h-5 w-5 text-green-600" />
+                    <span className="text-sm text-green-800">
+                      Se ha enviado un enlace de confirmación a tu email.
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Enlace de confirmación:</Label>
+                  <div className="flex space-x-2">
+                    <Input 
+                      value={confirmationLink} 
+                      readOnly 
+                      className="text-xs"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleCopyLink}
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <Button onClick={() => handleModalOpenChange(false)} className="w-full mt-6">Entendido</Button>
+              </div>
+              <DialogFooter>
+                <Button 
+                  onClick={() => handleModalOpenChange(false)}
+                  className="w-full bg-slate-800 hover:bg-slate-700"
+                >
+                  Continuar
+                </Button>
+              </DialogFooter>
             </motion.div>
           )}
         </AnimatePresence>

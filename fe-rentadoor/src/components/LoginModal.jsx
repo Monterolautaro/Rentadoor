@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,43 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 
 const LoginModal = ({ isOpen, onOpenChange }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const existingUsers = JSON.parse(localStorage.getItem('users_rentadoor')) || [];
-    const ownerExists = existingUsers.some(u => u.email === 'propietario@demo.com');
-    const tenantExists = existingUsers.some(u => u.name === 'Francisco Bolaños');
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3001/api';
 
-    if (!ownerExists) {
-        existingUsers.push({
-            id: 'mock-owner',
-            name: 'Propietario Demo',
-            email: 'propietario@demo.com',
-            password: 'password',
-            type: 'owner'
-        });
-    }
-
-    if (!tenantExists) {
-        existingUsers.push({
-            id: 'user-francisco-123',
-            name: 'Francisco Bolaños',
-            email: 'francisco@demo.com',
-            password: 'password',
-            type: 'tenant'
-        });
-    }
-    
-    if (!ownerExists || !tenantExists) {
-        localStorage.setItem('users_rentadoor', JSON.stringify(existingUsers));
-    }
-  }, []);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       toast({
@@ -59,85 +33,82 @@ const LoginModal = ({ isOpen, onOpenChange }) => {
       return;
     }
 
-    try {
-      const existingUsers = JSON.parse(localStorage.getItem('users_rentadoor')) || [];
-      const user = existingUsers.find(u => u.email === email && u.password === password);
+    setIsLoading(true);
 
-      if (user) {
-        toast({
-          title: '¡Inicio de sesión exitoso!',
-          description: `Bienvenido de nuevo, ${user.name}.`,
-        });
-        localStorage.setItem('currentUser_rentadoor', JSON.stringify(user));
-        window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
-        setEmail('');
-        setPassword('');
-        onOpenChange(false);
-      } else {
-        toast({
-          title: 'Error de inicio de sesión',
-          description: 'Correo electrónico o contraseña incorrectos.',
-          variant: 'destructive',
-        });
-      }
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password,
+      });
+
+      // Guardar token y datos del usuario
+      localStorage.setItem('authToken_rentadoor', response.data.token);
+      localStorage.setItem('currentUser_rentadoor', JSON.stringify(response.data.user));
+      
+      // Disparar evento para actualizar el estado en otros componentes
+      window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
+
+      toast({
+        title: '¡Inicio de sesión exitoso!',
+        description: `Bienvenido de nuevo, ${response.data.user.name}.`,
+      });
+
+      setEmail('');
+      setPassword('');
+      onOpenChange(false);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Ocurrió un problema al intentar iniciar sesión. Intenta de nuevo.',
+        title: 'Error de inicio de sesión',
+        description: error.response?.data?.message || 'Correo electrónico o contraseña incorrectos.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-slate-800">Iniciar Sesión</DialogTitle>
-            <DialogDescription>
-              Ingresa tus credenciales para acceder a tu cuenta de Rentadoor.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email-login" className="text-right text-slate-700">
-                  Email
-                </Label>
-                <Input
-                  id="email-login"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="col-span-3"
-                  placeholder="tu@email.com"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="password-login" className="text-right text-slate-700">
-                  Contraseña
-                </Label>
-                <Input
-                  id="password-login"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="col-span-3"
-                  placeholder="Tu contraseña"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-slate-800 hover:bg-slate-700">
-                Iniciar Sesión
-              </Button>
-            </DialogFooter>
-          </form>
-        </motion.div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-2xl text-slate-800">Iniciar Sesión</DialogTitle>
+          <DialogDescription>
+            Accede a tu cuenta de Rentadoor
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="tu@email.com"
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="password">Contraseña</Label>
+            <Input 
+              id="password" 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              placeholder="Tu contraseña"
+              disabled={isLoading}
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              type="submit" 
+              className="w-full bg-slate-800 hover:bg-slate-700"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
