@@ -1,28 +1,99 @@
 import { Injectable } from "@nestjs/common";
+import { LoginDto } from "src/dtos/login.dto";
+import { SignUpDto } from "src/dtos/signup.dto";
 import { SupabaseService } from "src/supabase/supabase.service";
-
-interface LoginDto {
-  email: string;
-  password: string;
-}
+import { UserRepository } from "src/user/user.repository";
+import * as bcrypt from 'bcrypt';
+import { Roles } from "src/common/enums/roles.enum";
 
 @Injectable()
 export class AuthRepository {
-    constructor(private readonly supabase: SupabaseService) {}
-    
+    constructor(private readonly supabase: SupabaseService,
+                private readonly userRepository: UserRepository
+    ) { }
+
     async login(loginDto: LoginDto) {
-        const { data, error } = await this.supabase.getClient().auth.signInWithPassword({
-            email: loginDto.email,
-            password: loginDto.password,
-        });
+        const { email, password } = loginDto
 
-        if (error) {
-            throw new Error(error.message);
+        if (!email || !password) return null;
+        
+        const foundUser = await this.userRepository.getUserByEmail(email)
+
+        if(!foundUser) return null;
+
+        return foundUser;
+    }
+
+    async signUp(user: SignUpDto) {
+        const { email, name, telephone, password } = user;
+
+        if(!email || !name || !telephone || !password) return null;
+
+        const existingUser = await this.userRepository.getUserByEmail(email);
+        if (existingUser) return null;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        try {
+            const { error } = await this.supabase.getClient()
+                .from('Users')
+                .insert({
+                    nombre: name,
+                    email: email,
+                    contraseña: hashedPassword,
+                    telefono: telephone,
+                    rol: Roles.USER
+                })
+
+            if(error) return null;
+
+            return { status: 201, message: 'user created successfully'}
+        } catch (error) {
+            return null;
         }
+    }
 
-        return {
-            user: data.user,
-            token: data.session?.access_token,
-        };
+    async getUserById(id: number) {
+        try {
+            const { data, error } = await this.supabase.getClient()
+                .from('Users')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error || !data) {
+                return null;
+            }
+
+            return data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async getUserByEmail(email: string) {
+        try {
+            const foundUser = await this.userRepository.getUserByEmail(email);
+            return foundUser;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async updatePassword(userId: number, hashedPassword: string) {
+        try {
+            const { error } = await this.supabase.getClient()
+                .from('Users')
+                .update({ contraseña: hashedPassword })
+                .eq('id', userId);
+
+            if (error) {
+                return null;
+            }
+
+            return { success: true };
+        } catch (error) {
+            return null;
+        }
     }
 }
