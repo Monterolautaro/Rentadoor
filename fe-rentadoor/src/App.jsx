@@ -12,6 +12,7 @@ import InitialPaymentPage from '@/pages/InitialPaymentPage';
 import ReceivePaymentPage from '@/pages/ReceivePaymentPage';
 import IdentityVerificationPage from '@/pages/IdentityVerificationPage';
 import AccountPage from '@/pages/AccountPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import { Toaster } from '@/components/ui/toaster';
 import EmailConfirmationPage from '@/pages/EmailConfirmationPage';
 
@@ -32,6 +33,7 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/propiedad/:propertyId" element={<PropertyDetailPage />} />
           <Route path="/confirmar-email/:token" element={<EmailConfirmationPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route 
             path="/propiedad/:propertyId/reservar" 
             element={

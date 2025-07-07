@@ -23,31 +23,30 @@ const Header = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3001/api';
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
+  // Verificar autenticación al cargar
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser_rentadoor');
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
-    
-    const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem('currentUser_rentadoor');
-      const newCurrentUser = updatedUser ? JSON.parse(updatedUser) : null;
+  }, []);
+
+  // Verificar autenticación cuando cambie el estado
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const storedUser = localStorage.getItem('currentUser_rentadoor');
+      const newCurrentUser = storedUser ? JSON.parse(storedUser) : null;
       setCurrentUser(newCurrentUser);
-      if (!newCurrentUser && (window.location.pathname.includes('/dashboard'))) {
-         navigate('/'); // Redirige a home si se cierra sesión desde un dashboard
-      }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('currentUserChanged_rentadoor', handleStorageChange);
-
+    window.addEventListener('currentUserChanged_rentadoor', handleAuthChange);
+    
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('currentUserChanged_rentadoor', handleStorageChange);
+      window.removeEventListener('currentUserChanged_rentadoor', handleAuthChange);
     };
-  }, [navigate]);
+  }, []);
 
   const handleHostPropertyRedirect = () => {
     if (currentUser) {
@@ -64,24 +63,18 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('authToken_rentadoor');
-      if (token) {
-        // Llamar al endpoint de logout del backend
-        await axios.post(`${API_URL}/auth/logout`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-      }
+      // Hacer logout en el backend
+      await axios.post(`${API_URL}/auth/logout`, {}, {
+        withCredentials: true
+      });
     } catch (error) {
       console.error('Error al hacer logout en el backend:', error);
-      // Continuar con el logout local aunque falle la llamada al backend
     }
 
-    // Limpiar datos locales
+    // Limpiar localStorage
     localStorage.removeItem('currentUser_rentadoor');
-    localStorage.removeItem('authToken_rentadoor');
     setCurrentUser(null);
+    
     window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
     
     toast({
@@ -90,18 +83,6 @@ const Header = () => {
     });
     navigate('/');
   };
-  
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const storedUser = localStorage.getItem('currentUser_rentadoor');
-      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-      if (JSON.stringify(currentUser) !== JSON.stringify(parsedUser)) {
-        setCurrentUser(parsedUser);
-      }
-    }, 500); 
-
-    return () => clearInterval(intervalId);
-  }, [currentUser]);
 
   return (
     <motion.header 

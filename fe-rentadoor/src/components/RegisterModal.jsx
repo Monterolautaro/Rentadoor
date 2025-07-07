@@ -72,7 +72,7 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
   const [confirmationLink, setConfirmationLink] = useState('');
   const { toast } = useToast();
 
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3001/api';
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
   const validatePassword = (password) => {
     const errors = [];
@@ -110,19 +110,17 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, {
+      const response = await axios.post(`${API_URL}/auth/signup`, {
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
+        telephone: formData.phone,
         password: formData.password,
+      }, {
+        withCredentials: true
       });
 
-      // Guardar token y datos del usuario si el registro incluye login automático
-      if (response.data.token) {
-        localStorage.setItem('authToken_rentadoor', response.data.token);
-        localStorage.setItem('currentUser_rentadoor', JSON.stringify(response.data.user));
-        window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
-      }
+      // Disparar evento para actualizar el estado en otros componentes
+      window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
 
       // Si el servidor devuelve un enlace de confirmación, usarlo
       if (response.data.confirmationLink) {
