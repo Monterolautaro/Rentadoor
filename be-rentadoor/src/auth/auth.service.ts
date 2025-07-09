@@ -53,7 +53,8 @@ export class AuthService {
                 name: result.nombre,
                 email: result.email,
                 phone: result.telefono,
-                role: result.rol
+                role: result.rol,
+                isEmailVerified: result.isEmailVerified
             }
         };
     }
@@ -88,6 +89,36 @@ export class AuthService {
 
         const token = this.jwtService.sign(payload);
         
+        // Enviar email de verificación
+        try {
+            const verificationToken = this.jwtService.sign(
+                { email, type: 'email_verification' },
+                { expiresIn: '24h' }
+            );
+
+            const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+            
+            await this.emailService.sendMail(
+                email,
+                'Verificar Email - Rentadoor',
+                `Hola ${createdUser.nombre},\n\nGracias por registrarte en Rentadoor. Por favor verifica tu email haciendo click en el siguiente enlace: ${verificationLink}`,
+                `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #1e293b;">Verificar Email - Rentadoor</h2>
+                    <p>Hola <strong>${createdUser.nombre}</strong>,</p>
+                    <p>Gracias por registrarte en Rentadoor. Por favor verifica tu email haciendo click en el siguiente botón:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${verificationLink}" style="background-color: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verificar Email</a>
+                    </div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+                    <p style="font-size: 14px; color: #64748b;">Saludos,<br>Equipo de Rentadoor</p>
+                </div>
+                `
+            );
+        } catch (error) {
+            console.error('Error sending verification email:', error);
+        }
+        
         return {
             success: "User created successfully",
             token: token,
@@ -96,7 +127,8 @@ export class AuthService {
                 name: createdUser.nombre,
                 email: createdUser.email,
                 phone: createdUser.telefono,
-                role: createdUser.rol
+                role: createdUser.rol,
+                isEmailVerified: createdUser.isEmailVerified
             }
         };
     }
@@ -122,7 +154,8 @@ export class AuthService {
                 name: user.nombre,
                 email: user.email,
                 phone: user.telefono,
-                role: user.rol
+                role: user.rol,
+                isEmailVerified: user.isEmailVerified
             };
         } catch (error) {
             throw new UnauthorizedException('Invalid token');
@@ -239,6 +272,98 @@ export class AuthService {
                 throw error;
             }
             throw new BadRequestException('Invalid or expired token');
+        }
+    }
+
+    async verifyEmail(token: string) {
+        try {
+            const payload = this.jwtService.verify(token);
+            
+            if (payload.type !== 'email_verification') {
+                throw new UnauthorizedException('Invalid token type');
+            }
+
+            const user = await this.authRepository.getUserByEmail(payload.email);
+            if (!user) {
+                throw new UnauthorizedException('User not found');
+            }
+
+            // Actualizar isEmailVerified a true
+            const result = await this.authRepository.updateEmailVerification(user.id, true);
+            
+            if (!result) {
+                throw new BadRequestException('Error updating email verification');
+            }
+
+            return {
+                success: true,
+                message: 'Email verified successfully'
+            };
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            throw new BadRequestException('Invalid or expired token');
+        }
+    }
+
+    async resendVerification(email: string) {
+        try {
+            const user = await this.authRepository.getUserByEmail(email);
+            
+            if (!user) {
+                return {
+                    success: true,
+                    message: 'If the email exists, a verification link has been sent.'
+                };
+            }
+
+            if (user.isEmailVerified) {
+                return {
+                    success: true,
+                    message: 'Email is already verified.'
+                };
+            }
+
+            const verificationToken = this.jwtService.sign(
+                { email, type: 'email_verification' },
+                { expiresIn: '24h' }
+            );
+
+            try {
+                const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+                
+                await this.emailService.sendMail(
+                    email,
+                    'Verificar Email - Rentadoor',
+                    `Hola ${user.nombre},\n\nPor favor verifica tu email haciendo click en el siguiente enlace: ${verificationLink}`,
+                    `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #1e293b;">Verificar Email - Rentadoor</h2>
+                        <p>Hola <strong>${user.nombre}</strong>,</p>
+                        <p>Por favor verifica tu email haciendo click en el siguiente botón:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${verificationLink}" style="background-color: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verificar Email</a>
+                        </div>
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+                        <p style="font-size: 14px; color: #64748b;">Saludos,<br>Equipo de Rentadoor</p>
+                    </div>
+                    `
+                );
+
+                return {
+                    success: true,
+                    message: 'Verification email sent successfully'
+                };
+            } catch (error) {
+                console.error('Error sending verification email:', error);
+                return {
+                    success: true,
+                    message: 'If the email exists, a verification link has been sent.'
+                };
+            }
+        } catch (error) {
+            throw new BadRequestException('Error sending verification email');
         }
     }
 }

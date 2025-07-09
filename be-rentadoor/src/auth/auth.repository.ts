@@ -42,7 +42,8 @@ export class AuthRepository {
                     email: email,
                     contraseña: hashedPassword,
                     telefono: telephone,
-                    rol: Roles.USER
+                    rol: Roles.USER,
+                    isEmailVerified: false
                 })
 
             if(error) return null;
@@ -85,6 +86,23 @@ export class AuthRepository {
             const { error } = await this.supabase.getClient()
                 .from('Users')
                 .update({ contraseña: hashedPassword })
+                .eq('id', userId);
+
+            if (error) {
+                return null;
+            }
+
+            return { success: true };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async updateEmailVerification(userId: number, isEmailVerified: boolean) {
+        try {
+            const { error } = await this.supabase.getClient()
+                .from('Users')
+                .update({ isEmailVerified })
                 .eq('id', userId);
 
             if (error) {

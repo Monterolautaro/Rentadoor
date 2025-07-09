@@ -149,4 +149,34 @@ export class AuthController {
             );
         }
     }
+
+    @Post('/verify-email')
+    async verifyEmail(@Body() body: { token: string }): Promise<any> {
+        try {
+            return await this.authService.verifyEmail(body.token);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                error.message || 'Internal server error',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Post('/resend-verification')
+    async resendVerification(@Body() body: { email: string }): Promise<any> {
+        try {
+            return await this.authService.resendVerification(body.email);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                error.message || 'Internal server error',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
 }
