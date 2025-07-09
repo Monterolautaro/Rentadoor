@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard } from 'lucide-react';
+import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard, Mail, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import RegisterModal from '@/components/RegisterModal';
@@ -48,8 +48,46 @@ const Header = () => {
     };
   }, []);
 
+  // Verificar periódicamente si el usuario ha verificado su email
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const checkEmailVerification = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/auth/me`, {
+          withCredentials: true
+        });
+        
+        if (response.data.authenticated && response.data.user.isEmailVerified !== currentUser.isEmailVerified) {
+          // Actualizar el usuario en localStorage con el estado actualizado
+          const updatedUser = { ...currentUser, isEmailVerified: response.data.user.isEmailVerified };
+          localStorage.setItem('currentUser_rentadoor', JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+          window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
+        }
+      } catch (error) {
+        console.error('Error checking email verification:', error);
+      }
+    };
+
+    // Verificar cada 5 segundos si el usuario está logueado pero no verificado
+    if (currentUser && !currentUser.isEmailVerified) {
+      const interval = setInterval(checkEmailVerification, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, API_URL]);
+  
+
   const handleHostPropertyRedirect = () => {
     if (currentUser) {
+      if (!currentUser.isEmailVerified) {
+        toast({
+          title: "Verificación de Email Requerida",
+          description: "Debes verificar tu email para publicar propiedades.",
+          variant: "destructive"
+        });
+        return;
+      }
       navigate('/dashboard/propietario');
     } else {
        toast({
@@ -118,6 +156,18 @@ const Header = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Hola, {currentUser.name.split(' ')[0]}</DropdownMenuLabel>
+                    {!currentUser.isEmailVerified && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => navigate('/verify-email')}
+                          className="text-amber-600 bg-amber-50 hover:bg-amber-100"
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          <span>Verificar Email (Requerido)</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                      <DropdownMenuItem onClick={() => navigate('/dashboard/mi-cuenta')}>
                       <User className="mr-2 h-4 w-4" />
