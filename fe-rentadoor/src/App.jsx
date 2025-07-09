@@ -12,8 +12,11 @@ import InitialPaymentPage from '@/pages/InitialPaymentPage';
 import ReceivePaymentPage from '@/pages/ReceivePaymentPage';
 import IdentityVerificationPage from '@/pages/IdentityVerificationPage';
 import AccountPage from '@/pages/AccountPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import { Toaster } from '@/components/ui/toaster';
 import EmailConfirmationPage from '@/pages/EmailConfirmationPage';
+import EmailVerificationPage from '@/pages/EmailVerificationPage';
+import EmailVerificationRequiredPage from '@/pages/EmailVerificationRequiredPage';
 
 const App = () => {
   const ProtectedRoute = ({ children }) => {
@@ -21,6 +24,20 @@ const App = () => {
     if (!currentUser) {
       return <Navigate to="/" replace />;
     }
+    return children;
+  };
+
+  const EmailVerifiedRoute = ({ children }) => {
+    const currentUser = localStorage.getItem('currentUser_rentadoor');
+    if (!currentUser) {
+      return <Navigate to="/" replace />;
+    }
+    
+    const user = JSON.parse(currentUser);
+    if (!user.isEmailVerified) {
+      return <Navigate to="/verificar-email-requerido" replace />;
+    }
+    
     return children;
   };
 
@@ -32,11 +49,16 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/propiedad/:propertyId" element={<PropertyDetailPage />} />
           <Route path="/confirmar-email/:token" element={<EmailConfirmationPage />} />
+          <Route path="/verify-email" element={<EmailVerificationPage />} />
+          <Route path="/verificar-email-requerido" element={<EmailVerificationRequiredPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route 
             path="/propiedad/:propertyId/reservar" 
             element={
               <ProtectedRoute>
-                <ReservationPage />
+                <EmailVerifiedRoute>
+                  <ReservationPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
           />
@@ -44,7 +66,9 @@ const App = () => {
             path="/reserva/:reservationId/pago-inicial" 
             element={
               <ProtectedRoute>
-                <InitialPaymentPage />
+                <EmailVerifiedRoute>
+                  <InitialPaymentPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
           />
@@ -60,7 +84,9 @@ const App = () => {
             path="/dashboard/propietario" 
             element={
               <ProtectedRoute>
-                <OwnerDashboardPage />
+                <EmailVerifiedRoute>
+                  <OwnerDashboardPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
           />
@@ -68,7 +94,9 @@ const App = () => {
             path="/dashboard/propietario/recibir-pago/:rentalId"
             element={
               <ProtectedRoute>
-                <ReceivePaymentPage />
+                <EmailVerifiedRoute>
+                  <ReceivePaymentPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             }
           />
@@ -76,7 +104,9 @@ const App = () => {
             path="/dashboard/propietario/agregar" 
             element={
               <ProtectedRoute>
-                <AddPropertyPage />
+                <EmailVerifiedRoute>
+                  <AddPropertyPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
           />
@@ -84,7 +114,9 @@ const App = () => {
             path="/dashboard/propietario/editar/:propertyId"
             element={
               <ProtectedRoute>
-                <EditPropertyPage />
+                <EmailVerifiedRoute>
+                  <EditPropertyPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
           />
@@ -92,7 +124,9 @@ const App = () => {
             path="/dashboard/verificar-identidad"
             element={
               <ProtectedRoute>
-                <IdentityVerificationPage />
+                <EmailVerifiedRoute>
+                  <IdentityVerificationPage />
+                </EmailVerifiedRoute>
               </ProtectedRoute>
             }
           />

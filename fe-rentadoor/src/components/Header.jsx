@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard } from 'lucide-react';
+import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard, Mail, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import RegisterModal from '@/components/RegisterModal';
@@ -23,34 +23,71 @@ const Header = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3001/api';
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
+  // Verificar autenticación al cargar
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser_rentadoor');
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
-    
-    const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem('currentUser_rentadoor');
-      const newCurrentUser = updatedUser ? JSON.parse(updatedUser) : null;
+  }, []);
+
+  // Verificar autenticación cuando cambie el estado
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const storedUser = localStorage.getItem('currentUser_rentadoor');
+      const newCurrentUser = storedUser ? JSON.parse(storedUser) : null;
       setCurrentUser(newCurrentUser);
-      if (!newCurrentUser && (window.location.pathname.includes('/dashboard'))) {
-         navigate('/'); // Redirige a home si se cierra sesión desde un dashboard
+    };
+
+    window.addEventListener('currentUserChanged_rentadoor', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('currentUserChanged_rentadoor', handleAuthChange);
+    };
+  }, []);
+
+  // Verificar periódicamente si el usuario ha verificado su email
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const checkEmailVerification = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/auth/me`, {
+          withCredentials: true
+        });
+        
+        if (response.data.authenticated && response.data.user.isEmailVerified !== currentUser.isEmailVerified) {
+          // Actualizar el usuario en localStorage con el estado actualizado
+          const updatedUser = { ...currentUser, isEmailVerified: response.data.user.isEmailVerified };
+          localStorage.setItem('currentUser_rentadoor', JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+          window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
+        }
+      } catch (error) {
+        console.error('Error checking email verification:', error);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('currentUserChanged_rentadoor', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('currentUserChanged_rentadoor', handleStorageChange);
-    };
-  }, [navigate]);
+    // Verificar cada 5 segundos si el usuario está logueado pero no verificado
+    if (currentUser && !currentUser.isEmailVerified) {
+      const interval = setInterval(checkEmailVerification, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, API_URL]);
+  
 
   const handleHostPropertyRedirect = () => {
     if (currentUser) {
+      if (!currentUser.isEmailVerified) {
+        toast({
+          title: "Verificación de Email Requerida",
+          description: "Debes verificar tu email para publicar propiedades.",
+          variant: "destructive"
+        });
+        return;
+      }
       navigate('/dashboard/propietario');
     } else {
        toast({
@@ -64,24 +101,18 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('authToken_rentadoor');
-      if (token) {
-        // Llamar al endpoint de logout del backend
-        await axios.post(`${API_URL}/auth/logout`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-      }
+      // Hacer logout en el backend
+      await axios.post(`${API_URL}/auth/logout`, {}, {
+        withCredentials: true
+      });
     } catch (error) {
       console.error('Error al hacer logout en el backend:', error);
-      // Continuar con el logout local aunque falle la llamada al backend
     }
 
-    // Limpiar datos locales
+    // Limpiar localStorage
     localStorage.removeItem('currentUser_rentadoor');
-    localStorage.removeItem('authToken_rentadoor');
     setCurrentUser(null);
+    
     window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
     
     toast({
@@ -90,18 +121,6 @@ const Header = () => {
     });
     navigate('/');
   };
-  
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const storedUser = localStorage.getItem('currentUser_rentadoor');
-      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-      if (JSON.stringify(currentUser) !== JSON.stringify(parsedUser)) {
-        setCurrentUser(parsedUser);
-      }
-    }, 500); 
-
-    return () => clearInterval(intervalId);
-  }, [currentUser]);
 
   return (
     <motion.header 
@@ -137,6 +156,18 @@ const Header = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Hola, {currentUser.name.split(' ')[0]}</DropdownMenuLabel>
+                    {!currentUser.isEmailVerified && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => navigate('/verify-email')}
+                          className="text-amber-600 bg-amber-50 hover:bg-amber-100"
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          <span>Verificar Email (Requerido)</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                      <DropdownMenuItem onClick={() => navigate('/dashboard/mi-cuenta')}>
                       <User className="mr-2 h-4 w-4" />
