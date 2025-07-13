@@ -94,4 +94,24 @@ export class StorageService {
       throw error;
     }
   }
+
+  async uploadPropertyImage(buffer: Buffer, userId: string, fileName: string): Promise<string> {
+    const storagePath = `${userId}/${Date.now()}_${fileName}`;
+    
+    await this.storageRepository.uploadPropertyImageToSupabase(storagePath, buffer);
+    
+    // Retornar la URL pública de la imagen
+    const imageUrl = await this.storageRepository.getPublicUrl(storagePath);
+    return imageUrl;
+  }
+
+  async getPropertyImageUrl(imageName: string): Promise<string> {
+    const imageUrl = await this.storageRepository.getPublicUrl(imageName);
+    return imageUrl;
+  }
+
+  async deletePropertyImage(imageName: string, userId: string): Promise<void> {
+    const storagePath = `${userId}/${imageName}`;
+    await this.storageRepository.deleteFromSupabase(storagePath);
+  }
 }
