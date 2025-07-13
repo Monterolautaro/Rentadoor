@@ -2,20 +2,23 @@ import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { Module } from "@nestjs/common";
-import { UserRepository } from "src/user/user.repository";
-import { EmailService } from "src/email/email.service";
-import { SupabaseService } from "src/supabase/supabase.service";
-import { UserModule } from "src/user/user.module";
-import { EmailModule } from "src/email/email.module";
-import { SupabaseModule } from "src/supabase/supabase.module";
+import { UserRepository } from "../user/user.repository";
+import { EmailService } from "../email/email.service";
+import { SupabaseService } from "../supabase/supabase.service";
+import { UserModule } from "../user/user.module";
+import { EmailModule } from "../email/email.module";
+import { SupabaseModule } from "../supabase/supabase.module";
+import { StorageModule } from "../storage/storage.module";
+import { RolesGuard } from "./guards/roles.guard";
 
 @Module({
     imports: [
         UserModule,
         EmailModule,
-        SupabaseModule
+        SupabaseModule,
     ],
     controllers: [AuthController],
-    providers: [AuthService, AuthRepository, UserRepository, EmailService, SupabaseService],
+    providers: [AuthService, AuthRepository, UserRepository, EmailService, SupabaseService, RolesGuard],
+    exports: [AuthRepository, AuthService]
 })
 export class AuthModule {}

@@ -1,14 +1,26 @@
-import { Body, Controller, Post, HttpException, HttpStatus, Res, Get, Req, Query, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Post, HttpException, HttpStatus, Res, Get, Req, Query, Put, UseGuards, Param } from "@nestjs/common";
 import { Response, Request } from 'express';
 import { AuthService } from "./auth.service";
-import { LoginDto } from "src/dtos/login.dto";
-import { SignUpDto } from "src/dtos/signup.dto";
+import { LoginDto } from "../dtos/login.dto";
+import { SignUpDto } from "../dtos/signup.dto";
+import { AuthGuard } from "./guards/auth.guard";
+import { RolesGuard } from "./guards/roles.guard";
+import { RolesDecorator } from "../common/decorators/roles.decorator";
+import { Roles } from "../common/enums/roles.enum";
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @UseGuards()
+    @Get('/test-cookies')
+    async testCookies(@Req() req: Request): Promise<any> {
+        return {
+            message: 'Cookies recibidas',
+            cookies: req.cookies,
+            hasAuthToken: !!req.cookies.authToken
+        };
+    }
+
     @Get('/me')
     async getCurrentUser(@Req() req: Request): Promise<any> {
         try {
@@ -57,9 +69,7 @@ export class AuthController {
     @Post('/signin')
     async login(@Body() body: LoginDto, @Res() res: Response): Promise<any> {
         try {
-            console.log('🔐 Iniciando login para:', body.email);
             const result = await this.authService.login(body);
-            console.log('✅ Login exitoso, configurando cookie...');
 
             res.cookie('authToken', result.token, {
                 httpOnly: true,
@@ -68,11 +78,9 @@ export class AuthController {
                 maxAge: 3600000 // 1 hora
             });
 
-            console.log('🍪 Cookie configurada correctamente');
             const { token, ...responseData } = result;
             return res.json(responseData);
         } catch (error) {
-            console.error('🚨 Error en login:', error);
             if (error instanceof HttpException) {
                 throw error;
             }
@@ -170,6 +178,40 @@ export class AuthController {
     async resendVerification(@Body() body: { email: string }): Promise<any> {
         try {
             return await this.authService.resendVerification(body.email);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                error.message || 'Internal server error',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Post('/admin/approve-identity/:userId')
+    @UseGuards(AuthGuard, RolesGuard)
+    @RolesDecorator(Roles.ADMIN)
+    async approveIdentityVerification(@Param('userId') userId: string): Promise<any> {
+        try {
+            return await this.authService.approveIdentityVerification(userId);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                error.message || 'Internal server error',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Post('/admin/reject-identity/:userId')
+    @UseGuards(AuthGuard, RolesGuard)
+    @RolesDecorator(Roles.ADMIN)
+    async rejectIdentityVerification(@Param('userId') userId: string): Promise<any> {
+        try {
+            return await this.authService.rejectIdentityVerification(userId);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

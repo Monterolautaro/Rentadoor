@@ -5,11 +5,10 @@ import { StorageRepository } from "./storage.repository";
 import { EncryptionModule } from "../encryption/encryption.module";
 import { SupabaseModule } from "../supabase/supabase.module";
 import { EncryptionService } from "../encryption/encryption.service";
-
-
+import { AuthModule } from "../auth/auth.module";
 
 @Module({
-    imports: [SupabaseModule, EncryptionModule],
+    imports: [SupabaseModule, EncryptionModule, AuthModule],
     controllers: [StorageController],
     providers: [StorageService, StorageRepository, EncryptionService]
 })

@@ -4,6 +4,9 @@ import * as request from 'supertest';
 import { StorageModule } from '../storage.module';
 import { SupabaseModule } from '../../supabase/supabase.module';
 import { EncryptionModule } from '../../encryption/encryption.module';
+import { JwtModule } from '@nestjs/jwt';
+import { EmailModule } from '../../email/email.module';
+import { AuthModule } from '../../auth/auth.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -12,7 +15,17 @@ describe('StorageController (e2e)', () => {
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [StorageModule, SupabaseModule, EncryptionModule],
+            imports: [
+                StorageModule, 
+                SupabaseModule, 
+                EncryptionModule,
+                EmailModule,
+                AuthModule,
+                JwtModule.register({
+                    secret: 'test-secret',
+                    signOptions: { expiresIn: '1h' },
+                }),
+            ],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -32,13 +45,6 @@ describe('StorageController (e2e)', () => {
             .attach('files', file1Path)
             .attach('files', file2Path);
 
-        console.log('Response status:', response.status);
-        console.log('Response body:', response.body);
-
-        if (response.status !== 201) {
-            console.error('Error response:', response.body);
-        }
-
         expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('selfie');
         expect(response.body).toHaveProperty('dni');
@@ -47,12 +53,47 @@ describe('StorageController (e2e)', () => {
     it('should fetch all encrypted files', async () => {
         const response = await request(app.getHttpServer())
             .get('/storage')
-            .expect(res => {
-                console.log('Upload response:', res.body);
-                if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}`);
-            });
+            .expect(200);
 
-        console.log('All files:', response.body);
+        expect(response.body).toBeDefined();
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('should upload files successfully', async () => {
+        const mockFiles = [
+            {
+                fieldname: 'files',
+                originalname: 'test1.jpg',
+                encoding: '7bit',
+                mimetype: 'image/jpeg',
+                buffer: Buffer.from('test image 1'),
+                size: 1024
+            },
+            {
+                fieldname: 'files',
+                originalname: 'test2.jpg',
+                encoding: '7bit',
+                mimetype: 'image/jpeg',
+                buffer: Buffer.from('test image 2'),
+                size: 1024
+            }
+        ];
+
+        const res = await request(app.getHttpServer())
+            .post('/storage/upload')
+            .attach('files', Buffer.from('test image 1'), 'test1.jpg')
+            .attach('files', Buffer.from('test image 2'), 'test2.jpg')
+            .expect(201);
+
+        expect(res.body).toBeDefined();
+        expect(res.body.selfie).toBeDefined();
+        expect(res.body.dni).toBeDefined();
+
+        const response = await request(app.getHttpServer())
+            .get('/storage')
+            .expect(200);
+
+        expect(response.body).toBeDefined();
         expect(Array.isArray(response.body)).toBe(true);
     });
 

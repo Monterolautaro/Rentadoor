@@ -3,12 +3,14 @@ import { EncryptionService } from '../encryption/encryption.service';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageRepository } from './storage.repository';
+import { AuthRepository } from '../auth/auth.repository';
 
 @Injectable()
 export class StorageService {
   constructor(
     private readonly encryptionService: EncryptionService,
     private readonly storageRepository: StorageRepository,
+    private readonly authRepository: AuthRepository,
   ) {}
 
   async uploadEncryptedFile(buffer: Buffer, userId: string, fileName: string) {
@@ -22,40 +24,74 @@ export class StorageService {
 
     await this.storageRepository.uploadToSupabase(storagePath, encrypted.cipherText);
 
-    const fileRecord = await this.storageRepository.insertMetadata({
+    // Convertir buffers a base64 para almacenamiento en DB
+    const metadata = {
       user_id: userId,
       file_name: fileName,
       storage_path: storagePath,
-      iv: encrypted.iv,
-      auth_tag: encrypted.authTag,
+      iv: encrypted.iv.toString('base64'),
+      auth_tag: encrypted.authTag.toString('base64'),
       encryption_algorithm: encrypted.algorithm,
       key_id: encrypted.keyId,
       sha256_hash: sha256,
-    });
+    };
 
+    const fileRecord = await this.storageRepository.insertMetadata(metadata);
 
     return fileRecord;
   }
 
   async getEncryptedFiles(userId?: string) {
-    return await this.storageRepository.fetchFiles(userId);
+    const files = await this.storageRepository.fetchFiles(userId);
+    
+    // Agrupar archivos por usuario y obtener información del usuario
+    const filesByUser = {};
+    
+    for (const file of files) {
+      const userId = file.user_id;
+      if (!filesByUser[userId]) {
+        // Obtener información del usuario
+        const user = await this.authRepository.getUserById(parseInt(userId));
+        filesByUser[userId] = {
+          userId,
+          user: user ? {
+            id: user.id,
+            name: user.nombre,
+            email: user.email,
+            identityVerificationStatus: user.identityVerificationStatus || 'not_verified'
+          } : null,
+          files: [],
+          status: user?.identityVerificationStatus || 'not_verified'
+        };
+      }
+      filesByUser[userId].files.push(file);
+    }
+    
+    return Object.values(filesByUser);
   }
 
   async downloadAndDecryptFile(fileId: string) {
-
     const fileRecord = await this.storageRepository.fetchFileById(fileId);
 
     const encryptedData = await this.storageRepository.downloadFromSupabase(fileRecord.storage_path);
 
-    const decryptedBuffer = this.encryptionService.decryptBuffer(
-      encryptedData,
-      fileRecord.iv,
-      fileRecord.auth_tag,
-    );
+    try {
+      // Convertir strings a buffers si es necesario
+      const ivBuffer = typeof fileRecord.iv === 'string' ? Buffer.from(fileRecord.iv, 'base64') : fileRecord.iv;
+      const authTagBuffer = typeof fileRecord.auth_tag === 'string' ? Buffer.from(fileRecord.auth_tag, 'base64') : fileRecord.auth_tag;
 
-    return {
-      fileName: fileRecord.file_name,
-      buffer: decryptedBuffer,
-    };
+      const decryptedBuffer = this.encryptionService.decryptBuffer(
+        encryptedData,
+        ivBuffer,
+        authTagBuffer,
+      );
+      return {
+        fileName: fileRecord.file_name,
+        buffer: decryptedBuffer,
+      };
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      throw error;
+    }
   }
 }

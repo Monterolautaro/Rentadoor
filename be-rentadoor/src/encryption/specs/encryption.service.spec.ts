@@ -19,15 +19,6 @@ describe('CryptoService AES-256-GCM Tests', () => {
 
     const encrypted = cryptoService.encryptBuffer(testBuffer);
 
-    console.log('🔐 Encrypted Data:');
-    console.log({
-      cipherText: encrypted.cipherText.toString('base64'),
-      iv: encrypted.iv.toString('base64'),
-      authTag: encrypted.authTag.toString('base64'),
-      algorithm: encrypted.algorithm,
-      keyId: encrypted.keyId,
-    });
-
     expect(encrypted.cipherText).toBeInstanceOf(Buffer);
     expect(encrypted.iv).toBeInstanceOf(Buffer);
     expect(encrypted.authTag).toBeInstanceOf(Buffer);
@@ -39,8 +30,6 @@ describe('CryptoService AES-256-GCM Tests', () => {
       encrypted.iv,
       encrypted.authTag,
     );
-
-    console.log('🔓 Decrypted Data:', decrypted.toString('utf-8'));
 
     expect(decrypted.toString('utf-8')).toBe(testString);
   });

@@ -26,12 +26,17 @@ export class EncryptionService {
     }
 
     decryptBuffer(encrypted: Buffer | string, iv: Buffer, authTag: Buffer) {
-        const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, getEncryptionKey(), iv);
-        decipher.setAuthTag(authTag);
+        try {
+            const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, getEncryptionKey(), iv);
+            decipher.setAuthTag(authTag);
 
-        const encryptedBuffer = typeof encrypted === 'string' ? Buffer.from(encrypted, 'base64') : encrypted;
-        const decrypted = Buffer.concat([decipher.update(encryptedBuffer), decipher.final()]);
-        return decrypted;
+            const encryptedBuffer = typeof encrypted === 'string' ? Buffer.from(encrypted, 'base64') : encrypted;
+            const decrypted = Buffer.concat([decipher.update(encryptedBuffer), decipher.final()]);
+            return decrypted;
+        } catch (error) {
+            console.error('Error decrypting buffer:', error);
+            throw new Error(`Failed to decrypt: ${error.message}`);
+        }
     }
 
 }

@@ -1,420 +1,361 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
-  Clock, 
-  User, 
-  Calendar,
-  Download,
-  RefreshCw
-} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/use-toast';
+import { Shield, Users, FileText, CheckCircle, XCircle, Clock, Eye, Check, X } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
 import axios from 'axios';
 
 const AdminDashboardPage = () => {
-  const [currentUser, setCurrentUser] = useState(null);
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState(null);
-  const [viewingImages, setViewingImages] = useState(false);
-  const [imageData, setImageData] = useState({ selfie: null, dni: null });
-  const navigate = useNavigate();
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const { toast } = useToast();
+  const { user } = useAuthContext();
 
   const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      
-      // Verificar si es administrador
-      if (user.role !== 'admin') {
-        toast({
-          title: "Acceso Denegado",
-          description: "No tienes permisos para acceder al panel de administrador.",
-          variant: "destructive",
+    const fetchVerifications = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/storage`, {
+          withCredentials: true
         });
-        navigate('/');
-        return;
+        setVerifications(response.data);
+      } catch (error) {
+        console.error('Error fetching verifications:', error);
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar las verificaciones.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      loadVerifications();
-    } else {
-      navigate('/');
-    }
-  }, [navigate, toast]);
+    };
 
-  const loadVerifications = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_URL}/admin/identity-verifications`, {
-        withCredentials: true
-      });
-      setVerifications(response.data);
-    } catch (error) {
-      console.error('Error loading verifications:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las verificaciones.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (user) {
+      fetchVerifications();
     }
-  };
+  }, [user, API_URL, toast]);
 
   const handleApprove = async (verificationId) => {
     try {
-      await axios.put(`${API_URL}/admin/identity-verifications/${verificationId}/approve`, {}, {
+      const response = await axios.post(`${API_URL}/auth/admin/approve-identity/${verificationId}`, {}, {
         withCredentials: true
       });
-      
+
       toast({
-        title: "Verificación Aprobada",
-        description: "La verificación de identidad ha sido aprobada.",
+        title: 'Verificación aprobada',
+        description: 'La verificación de identidad ha sido aprobada exitosamente.',
       });
-      
-      loadVerifications();
+
+      // Recargar las verificaciones
+      const fetchVerifications = async () => {
+        try {
+          const response = await axios.get(`${API_URL}/storage`, {
+            withCredentials: true
+          });
+          setVerifications(response.data);
+        } catch (error) {
+          console.error('Error fetching verifications:', error);
+        }
+      };
+      fetchVerifications();
     } catch (error) {
-      console.error('Error approving verification:', error);
       toast({
-        title: "Error",
-        description: "No se pudo aprobar la verificación.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudo aprobar la verificación.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleReject = async (verificationId, reason) => {
+  const handleReject = async (verificationId) => {
     try {
-      await axios.put(`${API_URL}/admin/identity-verifications/${verificationId}/reject`, {
-        reason: reason
-      }, {
+      const response = await axios.post(`${API_URL}/auth/admin/reject-identity/${verificationId}`, {}, {
         withCredentials: true
       });
-      
+
       toast({
-        title: "Verificación Rechazada",
-        description: "La verificación de identidad ha sido rechazada.",
+        title: 'Verificación rechazada',
+        description: 'La verificación de identidad ha sido rechazada.',
       });
-      
-      loadVerifications();
+
+      // Recargar las verificaciones
+      const fetchVerifications = async () => {
+        try {
+          const response = await axios.get(`${API_URL}/storage`, {
+            withCredentials: true
+          });
+          setVerifications(response.data);
+        } catch (error) {
+          console.error('Error fetching verifications:', error);
+        }
+      };
+      fetchVerifications();
     } catch (error) {
-      console.error('Error rejecting verification:', error);
       toast({
-        title: "Error",
-        description: "No se pudo rechazar la verificación.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudo rechazar la verificación.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleViewImages = async (verification) => {
+  const handleViewImage = async (fileId) => {
     try {
-      setViewingImages(true);
-      setSelectedVerification(verification);
-      
-      // Descargar imágenes
-      const [selfieResponse, dniResponse] = await Promise.all([
-        axios.get(`${API_URL}/storage/download/${verification.selfieFileId}`, {
-          withCredentials: true
-        }),
-        axios.get(`${API_URL}/storage/download/${verification.dniFileId}`, {
-          withCredentials: true
-        })
-      ]);
-      
-      setImageData({
-        selfie: `data:image/jpeg;base64,${selfieResponse.data.base64}`,
-        dni: `data:image/jpeg;base64,${dniResponse.data.base64}`
+      const response = await axios.get(`${API_URL}/storage/download/${fileId}`, {
+        withCredentials: true
       });
+      
+      setSelectedImage(`data:image/jpeg;base64,${response.data.base64}`);
+      setShowImageModal(true);
     } catch (error) {
-      console.error('Error loading images:', error);
       toast({
-        title: "Error",
-        description: "No se pudieron cargar las imágenes.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudo cargar la imagen.',
+        variant: 'destructive',
       });
-    } finally {
-      setViewingImages(false);
     }
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="mr-1 h-3 w-3" /> Pendiente</Badge>;
-      case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3" /> Aprobada</Badge>;
-      case 'rejected':
-        return <Badge variant="secondary" className="bg-red-100 text-red-800"><XCircle className="mr-1 h-3 w-3" /> Rechazada</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
+    const statusConfig = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      verified: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      rejected: { color: 'bg-red-100 text-red-800', icon: XCircle },
+      not_verified: { color: 'bg-gray-100 text-gray-800', icon: Clock },
+    };
+
+    const config = statusConfig[status] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <Badge className={config.color}>
+        <Icon className="w-3 h-3 mr-1" />
+        {status === 'verified' ? 'Verificada' : 
+         status === 'approved' ? 'Aprobada' :
+         status === 'rejected' ? 'Rechazada' :
+         status === 'pending' ? 'Pendiente' : 'No verificada'}
+      </Badge>
+    );
   };
-
-  const pendingVerifications = verifications.filter(v => v.status === 'pending');
-  const approvedVerifications = verifications.filter(v => v.status === 'approved');
-  const rejectedVerifications = verifications.filter(v => v.status === 'rejected');
-
-  if (!currentUser || currentUser.role !== 'admin') {
-    return null;
-  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-          <span>Cargando verificaciones...</span>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 flex items-center gap-2">
-            <Shield className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
             Panel de Administrador
           </h1>
-          <p className="text-lg text-slate-600">Gestiona las verificaciones de identidad de los usuarios.</p>
+          <p className="text-slate-600">
+            Gestiona las verificaciones de identidad de los usuarios
+          </p>
         </div>
 
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="pending">
-              <Clock className="mr-2 h-4 w-4" />
-              Pendientes ({pendingVerifications.length})
-            </TabsTrigger>
-            <TabsTrigger value="approved">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Aprobadas ({approvedVerifications.length})
-            </TabsTrigger>
-            <TabsTrigger value="rejected">
-              <XCircle className="mr-2 h-4 w-4" />
-              Rechazadas ({rejectedVerifications.length})
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Verificaciones Pendientes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-blue-600">
+                  {verifications.filter(v => v.status === 'pending').length}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Usuarios esperando verificación
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="pending">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Verificaciones Pendientes</CardTitle>
-                <CardDescription>Revisa y aprueba las verificaciones de identidad pendientes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pendingVerifications.length > 0 ? (
-                  <div className="space-y-4">
-                    {pendingVerifications.map((verification) => (
-                      <div key={verification.id} className="border rounded-lg p-4 bg-slate-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <User className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold">{verification.userName}</span>
-                              {getStatusBadge(verification.status)}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Archivos Subidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-slate-800">
+                  {verifications.reduce((total, v) => total + v.files.length, 0)}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Documentos en el sistema
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Estado del Sistema
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-green-600">
+                  Activo
+                </p>
+                <p className="text-sm text-slate-600">
+                  Sistema funcionando
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Verificaciones de Identidad</CardTitle>
+            <CardDescription>
+              Revisa y aprueba las verificaciones de identidad de los usuarios
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {verifications.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                  No hay verificaciones pendientes
+                </h3>
+                <p className="text-slate-600">
+                  Los usuarios aparecerán aquí cuando suban sus documentos de identidad
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {verifications.map((verification) => (
+                  <Card key={verification.userId} className="border-l-4 border-l-blue-500">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {verification.user?.name || `Usuario ID: ${verification.userId}`}
+                          </CardTitle>
+                          <CardDescription>
+                            {verification.user?.email && (
+                              <div className="text-sm text-slate-600 mb-1">
+                                {verification.user.email}
+                              </div>
+                            )}
+                            {verification.files.length} documento{verification.files.length !== 1 ? 's' : ''} subido{verification.files.length !== 1 ? 's' : ''}
+                          </CardDescription>
+                        </div>
+                        {getStatusBadge(verification.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {verification.files.map((file) => (
+                            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-slate-400" />
+                                <div>
+                                  <p className="text-sm font-medium">{file.file_name}</p>
+                                  <p className="text-xs text-slate-500">
+                                    {new Date(file.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewImage(file.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-slate-600">
-                              <span>ID: {verification.userId}</span>
-                              <span>•</span>
-                              <span>Enviado: {new Date(verification.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
+                          ))}
+                        </div>
+                        {verification.status === 'pending' && (
                           <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleViewImages(verification)}
-                              disabled={viewingImages}
+                            <Button
+                              onClick={() => handleApprove(verification.userId)}
+                              className="bg-green-600 hover:bg-green-500"
                             >
-                              <Eye className="mr-1 h-3 w-3" />
-                              Ver
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => handleApprove(verification.id)}
-                            >
-                              <CheckCircle className="mr-1 h-3 w-3" />
+                              <Check className="h-4 w-4 mr-2" />
                               Aprobar
                             </Button>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              onClick={() => handleReject(verification.userId)}
                               variant="destructive"
-                              onClick={() => handleReject(verification.id, 'Documentos no válidos')}
                             >
-                              <XCircle className="mr-1 h-3 w-3" />
+                              <X className="h-4 w-4 mr-2" />
                               Rechazar
                             </Button>
                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-slate-500 py-8">No hay verificaciones pendientes.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="approved">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Verificaciones Aprobadas</CardTitle>
-                <CardDescription>Historial de verificaciones aprobadas.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {approvedVerifications.length > 0 ? (
-                  <div className="space-y-4">
-                    {approvedVerifications.map((verification) => (
-                      <div key={verification.id} className="border rounded-lg p-4 bg-green-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <User className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold">{verification.userName}</span>
-                              {getStatusBadge(verification.status)}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-slate-600">
-                              <span>ID: {verification.userId}</span>
-                              <span>•</span>
-                              <span>Aprobado: {new Date(verification.updatedAt).toLocaleDateString()}</span>
-                            </div>
+                        )}
+                        {verification.status === 'verified' && (
+                          <div className="flex items-center gap-2 text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="text-sm">Verificación aprobada</span>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleViewImages(verification)}
-                          >
-                            <Eye className="mr-1 h-3 w-3" />
-                            Ver
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-slate-500 py-8">No hay verificaciones aprobadas.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="rejected">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Verificaciones Rechazadas</CardTitle>
-                <CardDescription>Historial de verificaciones rechazadas.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {rejectedVerifications.length > 0 ? (
-                  <div className="space-y-4">
-                    {rejectedVerifications.map((verification) => (
-                      <div key={verification.id} className="border rounded-lg p-4 bg-red-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <User className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold">{verification.userName}</span>
-                              {getStatusBadge(verification.status)}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-slate-600">
-                              <span>ID: {verification.userId}</span>
-                              <span>•</span>
-                              <span>Rechazado: {new Date(verification.updatedAt).toLocaleDateString()}</span>
-                            </div>
-                            {verification.reason && (
-                              <p className="text-sm text-red-600 mt-1">
-                                <strong>Motivo:</strong> {verification.reason}
-                              </p>
-                            )}
+                        )}
+                        {verification.status === 'rejected' && (
+                          <div className="flex items-center gap-2 text-red-600">
+                            <XCircle className="h-4 w-4" />
+                            <span className="text-sm">Verificación rechazada</span>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleViewImages(verification)}
-                          >
-                            <Eye className="mr-1 h-3 w-3" />
-                            Ver
-                          </Button>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-slate-500 py-8">No hay verificaciones rechazadas.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Modal para ver imágenes */}
-        {selectedVerification && imageData.selfie && imageData.dni && (
+        {showImageModal && selectedImage && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg p-4 max-w-2xl max-h-2xl">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold">Verificación de {selectedVerification.userName}</h3>
-                <Button variant="outline" onClick={() => setSelectedVerification(null)}>
-                  Cerrar
+                <h3 className="text-lg font-semibold">Vista previa del documento</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowImageModal(false);
+                    setSelectedImage(null);
+                  }}
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Selfie</h4>
-                  <img 
-                    src={imageData.selfie} 
-                    alt="Selfie" 
-                    className="w-full rounded-lg border"
-                  />
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">DNI</h4>
-                  <img 
-                    src={imageData.dni} 
-                    alt="DNI" 
-                    className="w-full rounded-lg border"
-                  />
-                </div>
-              </div>
-              {selectedVerification.status === 'pending' && (
-                <div className="flex gap-2 mt-4 justify-end">
-                  <Button 
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      handleApprove(selectedVerification.id);
-                      setSelectedVerification(null);
-                    }}
-                  >
-                    <CheckCircle className="mr-1 h-3 w-3" />
-                    Aprobar
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    onClick={() => {
-                      handleReject(selectedVerification.id, 'Documentos no válidos');
-                      setSelectedVerification(null);
-                    }}
-                  >
-                    <XCircle className="mr-1 h-3 w-3" />
-                    Rechazar
-                  </Button>
-                </div>
-              )}
+              <img
+                src={selectedImage}
+                alt="Documento"
+                className="max-w-full max-h-96 object-contain"
+              />
             </div>
           </div>
         )}

@@ -1,92 +1,252 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { User, Edit3, ShieldCheck, ShieldAlert, ShieldX, BadgeCheck, ChevronLeft } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { User, Mail, Shield, CheckCircle, AlertCircle, Edit, Key, LogOut, Clock } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import axios from 'axios';
 
 const AccountPage = () => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const navigate = useNavigate();
+  const { user, logout } = useAuthContext();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isRequestingPasswordReset, setIsRequestingPasswordReset] = useState(false);
 
-  useEffect(() => {
-    const loadData = () => {
-      const storedUser = localStorage.getItem('currentUser_rentadoor');
-      if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
-      } else {
-        navigate('/');
-      }
-    };
-    loadData();
-    window.addEventListener('storage', loadData);
-    return () => {
-      window.removeEventListener('storage', loadData);
-    };
-  }, [navigate]);
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
-  const handleNotImplemented = (feature) => {
-    toast({
-      title: `🚧 ${feature}`,
-      description: "Esta función aún no está implementada. ¡Puedes solicitarla en tu próximo mensaje! 🚀"
-    });
-  };
-
-  const renderIdentityStatus = () => {
-    if (!currentUser) return null;
-    switch (currentUser.identityStatus) {
-      case 'Verified':
-        return <div className="flex items-center gap-2 text-green-600 bg-green-100 px-3 py-2 rounded-md"><ShieldCheck className="h-5 w-5" /> <span className="font-semibold">Identidad Verificada</span></div>;
-      case 'Pending':
-        return <div className="flex items-center gap-2 text-yellow-600 bg-yellow-100 px-3 py-2 rounded-md"><ShieldAlert className="h-5 w-5 animate-pulse" /> <span className="font-semibold">Verificación Pendiente</span></div>;
-      case 'Not Verified':
-      default:
-        return <div className="flex items-center gap-2 text-red-600 bg-red-100 px-3 py-2 rounded-md"><ShieldX className="h-5 w-5" /> <span className="font-semibold">Identidad No Verificada</span></div>;
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: 'Cierre de sesión exitoso',
+        description: 'Has cerrado sesión correctamente.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error al cerrar sesión',
+        description: 'Hubo un problema al cerrar sesión.',
+        variant: 'destructive',
+      });
     }
   };
 
-  if (!currentUser) {
-    return <div className="flex justify-center items-center h-screen"><p className="text-xl text-slate-600">Cargando datos del usuario...</p></div>;
+  const handleVerifyEmail = () => {
+    navigate('/verify-email');
+  };
+
+  const handleVerifyIdentity = () => {
+    navigate('/dashboard/verificar-identidad');
+  };
+
+  const handleChangePassword = async () => {
+    if (!user?.email) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo obtener tu email.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsRequestingPasswordReset(true);
+
+    try {
+      await axios.post(`${API_URL}/auth/forgot-password`, {
+        email: user.email
+      }, {
+        withCredentials: true
+      });
+
+      toast({
+        title: 'Email enviado',
+        description: 'Se ha enviado un enlace de recuperación a tu email.',
+      });
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo enviar el email de recuperación. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRequestingPasswordReset(false);
+    }
+  };
+
+  const handleEditInfo = () => {
+    // TODO: Implementar edición de información
+    toast({
+      title: 'Función en desarrollo',
+      description: 'Esta función estará disponible próximamente.',
+    });
+  };
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <div className="mb-8">
-            <Button onClick={() => navigate(-1)} variant="outline" className="mb-6">
-                <ChevronLeft className="mr-2 h-4 w-4" /> Volver
-            </Button>
-            <h1 className="text-4xl font-bold text-slate-800">Mi Cuenta</h1>
-            <p className="text-lg text-slate-600">Gestiona tu información personal y el estado de tu cuenta.</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
+            Mi Cuenta
+          </h1>
+          <p className="text-slate-600">
+            Gestiona tu información personal y configuración
+          </p>
         </div>
 
-        <Card className="shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
             <CardHeader>
-                <CardTitle className="text-2xl text-slate-700 flex items-center gap-2"><User className="h-6 w-6"/>Información Personal</CardTitle>
-                <CardDescription>Revisa y actualiza tus datos personales y estado de verificación.</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Información Personal
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-4 p-4 border rounded-lg bg-slate-50/50">
-                    <div><p className="font-medium text-slate-600">Nombre Completo:</p><p className="text-slate-800">{currentUser.name}</p></div>
-                    <div><p className="font-medium text-slate-600">Correo Electrónico:</p><p className="text-slate-800">{currentUser.email}</p></div>
-                </div>
-                <div className="space-y-2">
-                    <p className="font-medium text-slate-600">Verificación de Identidad:</p>
-                    {renderIdentityStatus()}
-                </div>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-                <Button onClick={() => handleNotImplemented('Editar Información')} variant="outline"><Edit3 className="mr-2 h-4 w-4" /> Editar Información</Button>
-                {currentUser.identityStatus !== 'Verified' && (
-                  <Button onClick={() => navigate('/dashboard/verificar-identidad')} className="bg-blue-600 hover:bg-blue-500">
-                    <BadgeCheck className="mr-2 h-4 w-4" /> 
-                    {currentUser.identityStatus === 'Pending' ? 'Ver Estado' : 'Verificar Identidad'}
-                  </Button>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold">Nombre:</span> {user.name}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold">Email:</span> {user.email}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold">Teléfono:</span> {user.phone || 'No especificado'}
+                </p>
+                {user.role === 'admin' && (
+                  <p className="text-sm text-slate-600">
+                    <span className="font-semibold">Rol:</span> 
+                    <Badge className="ml-2 bg-blue-100 text-blue-800">
+                      Administrador
+                    </Badge>
+                  </p>
                 )}
-            </CardFooter>
-        </Card>
+              </div>
+              <Button variant="outline" className="w-full" onClick={handleEditInfo}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Información
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Estado de Verificación
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Email verificado:</span>
+                  {user.isEmailVerified ? (
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Verificado
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      Pendiente
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Identidad verificada:</span>
+                  {user.identityVerificationStatus === 'verified' ? (
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Verificada
+                    </Badge>
+                  ) : user.identityVerificationStatus === 'pending' ? (
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      <Clock className="w-3 h-3 mr-1" />
+                      En proceso
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-gray-100 text-gray-800">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      No verificada
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              {!user.isEmailVerified && (
+                <Button variant="outline" className="w-full" onClick={handleVerifyEmail}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Verificar Email
+                </Button>
+              )}
+              {user.role !== 'admin' && (
+                <Button variant="outline" className="w-full" onClick={handleVerifyIdentity}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Verificar Identidad
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Seguridad
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleChangePassword}
+                disabled={isRequestingPasswordReset}
+              >
+                <Key className="h-4 w-4 mr-2" />
+                {isRequestingPasswordReset ? 'Enviando...' : 'Cambiar Contraseña'}
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Shield className="h-4 w-4 mr-2" />
+                Configuración de Seguridad
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <LogOut className="h-5 w-5" />
+                Sesión
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Cierra tu sesión de forma segura
+              </p>
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Cerrar Sesión
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
     </div>
   );

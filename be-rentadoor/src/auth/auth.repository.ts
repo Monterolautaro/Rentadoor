@@ -1,16 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { LoginDto } from "src/dtos/login.dto";
-import { SignUpDto } from "src/dtos/signup.dto";
-import { SupabaseService } from "src/supabase/supabase.service";
-import { UserRepository } from "src/user/user.repository";
+import { LoginDto } from "../dtos/login.dto";
+import { SignUpDto } from "../dtos/signup.dto";
+import { UserRepository } from "../user/user.repository";
+import { SupabaseService } from "../supabase/supabase.service";
+import { Roles } from "../common/enums/roles.enum";
 import * as bcrypt from 'bcrypt';
-import { Roles } from "src/common/enums/roles.enum";
 
 @Injectable()
 export class AuthRepository {
-    constructor(private readonly supabase: SupabaseService,
-                private readonly userRepository: UserRepository
-    ) { }
+    constructor(
+        private readonly userRepository: UserRepository,
+        private readonly supabase: SupabaseService
+    ) {}
 
     async login(loginDto: LoginDto) {
         const { email, password } = loginDto
@@ -43,7 +44,8 @@ export class AuthRepository {
                     contraseña: hashedPassword,
                     telefono: telephone,
                     rol: Roles.USER,
-                    isEmailVerified: false
+                    isEmailVerified: false,
+                    identityVerificationStatus: 'not_verified'
                 })
 
             if(error) return null;
@@ -74,8 +76,17 @@ export class AuthRepository {
 
     async getUserByEmail(email: string) {
         try {
-            const foundUser = await this.userRepository.getUserByEmail(email);
-            return foundUser;
+            const { data, error } = await this.supabase.getClient()
+                .from('Users')
+                .select('*')
+                .eq('email', email)
+                .single();
+
+            if (error || !data) {
+                return null;
+            }
+
+            return data;
         } catch (error) {
             return null;
         }
@@ -113,5 +124,31 @@ export class AuthRepository {
         } catch (error) {
             return null;
         }
+    }
+
+    async updateIdentityVerificationStatus(userId: string, status: string) {
+        try {
+            
+            const { error } = await this.supabase.getClient()
+                .from('Users')
+                .update({ identityVerificationStatus: status })
+                .eq('id', userId);
+
+            if (error) {
+                return null;
+            }
+
+            return { success: true };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async approveIdentityVerification(userId: string) {
+        return this.updateIdentityVerificationStatus(userId, 'verified');
+    }
+
+    async rejectIdentityVerification(userId: string) {
+        return this.updateIdentityVerificationStatus(userId, 'rejected');
     }
 }

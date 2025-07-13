@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Loader2, MailCheck, Copy } from 'lucide-react';
-import axios from 'axios';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const PasswordStrengthIndicator = ({ password }) => {
   const validatePassword = (password) => {
@@ -71,8 +71,7 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [confirmationLink, setConfirmationLink] = useState('');
   const { toast } = useToast();
-
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
+  const { signup } = useAuthContext();
 
   const validatePassword = (password) => {
     const errors = [];
@@ -110,24 +109,19 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/auth/signup`, {
+      const response = await signup({
         name: formData.name,
         email: formData.email,
         telephone: formData.phone,
         password: formData.password,
-      }, {
-        withCredentials: true
       });
 
-      // Disparar evento para actualizar el estado en otros componentes
-      window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
-
       // Si el servidor devuelve un enlace de confirmación, usarlo
-      if (response.data.confirmationLink) {
-        setConfirmationLink(response.data.confirmationLink);
+      if (response.confirmationLink) {
+        setConfirmationLink(response.confirmationLink);
       } else {
         // Crear enlace local como fallback
-        const confirmationToken = response.data.confirmationToken || crypto.randomUUID();
+        const confirmationToken = response.confirmationToken || crypto.randomUUID();
         const link = `${window.location.origin}/confirmar-email/${confirmationToken}`;
         setConfirmationLink(link);
       }

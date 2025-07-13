@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard, Mail, CheckCircle, Shield } from 'lucide-react';
@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import RegisterModal from '@/components/RegisterModal';
 import LoginModal from '@/components/LoginModal';
-import axios from 'axios';
+import { useAuthContext } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,68 +19,13 @@ import {
 const Header = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user, logout } = useAuthContext();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
-
-  // Verificar autenticación al cargar
-  useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  // Verificar autenticación cuando cambie el estado
-  useEffect(() => {
-    const handleAuthChange = () => {
-      const storedUser = localStorage.getItem('currentUser_rentadoor');
-      const newCurrentUser = storedUser ? JSON.parse(storedUser) : null;
-      setCurrentUser(newCurrentUser);
-    };
-
-    window.addEventListener('currentUserChanged_rentadoor', handleAuthChange);
-    
-    return () => {
-      window.removeEventListener('currentUserChanged_rentadoor', handleAuthChange);
-    };
-  }, []);
-
-  // Verificar periódicamente si el usuario ha verificado su email
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const checkEmailVerification = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/auth/me`, {
-          withCredentials: true
-        });
-        
-        if (response.data.authenticated && response.data.user.isEmailVerified !== currentUser.isEmailVerified) {
-          // Actualizar el usuario en localStorage con el estado actualizado
-          const updatedUser = { ...currentUser, isEmailVerified: response.data.user.isEmailVerified };
-          localStorage.setItem('currentUser_rentadoor', JSON.stringify(updatedUser));
-          setCurrentUser(updatedUser);
-          window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
-        }
-      } catch (error) {
-        console.error('Error checking email verification:', error);
-      }
-    };
-
-    // Verificar cada 5 segundos si el usuario está logueado pero no verificado
-    if (currentUser && !currentUser.isEmailVerified) {
-      const interval = setInterval(checkEmailVerification, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [currentUser, API_URL]);
-  
-
   const handleHostPropertyRedirect = () => {
-    if (currentUser) {
-      if (!currentUser.isEmailVerified) {
+    if (user) {
+      if (!user.isEmailVerified) {
         toast({
           title: "Verificación de Email Requerida",
           description: "Debes verificar tu email para publicar propiedades.",
@@ -101,25 +46,20 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      // Hacer logout en el backend
-      await axios.post(`${API_URL}/auth/logout`, {}, {
-        withCredentials: true
+      await logout();
+      
+      toast({
+        title: 'Cierre de sesión exitoso',
+        description: 'Has cerrado sesión correctamente.',
       });
+      navigate('/');
     } catch (error) {
-      console.error('Error al hacer logout en el backend:', error);
+      toast({
+        title: 'Error al cerrar sesión',
+        description: 'Hubo un problema al cerrar sesión.',
+        variant: 'destructive',
+      });
     }
-
-    // Limpiar localStorage
-    localStorage.removeItem('currentUser_rentadoor');
-    setCurrentUser(null);
-    
-    window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
-    
-    toast({
-      title: 'Cierre de sesión exitoso',
-      description: 'Has cerrado sesión correctamente.',
-    });
-    navigate('/');
   };
 
   return (
@@ -137,7 +77,7 @@ const Header = () => {
           </Link>
 
           <div className="flex items-center space-x-4">
-            {currentUser ? (
+            {user ? (
               <>
                 <Button 
                   onClick={handleHostPropertyRedirect}
@@ -150,13 +90,13 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2">
                       <User className="h-4 w-4" />
-                      <span>{currentUser.name}</span>
+                      <span>{user.name}</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Hola, {currentUser.name.split(' ')[0]}</DropdownMenuLabel>
-                    {!currentUser.isEmailVerified && (
+                    <DropdownMenuLabel>Hola, {user.name.split(' ')[0]}</DropdownMenuLabel>
+                    {!user.isEmailVerified && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -181,7 +121,7 @@ const Header = () => {
                       <Building className="mr-2 h-4 w-4" />
                       <span>Panel Propietario</span>
                     </DropdownMenuItem>
-                    {currentUser.role === 'admin' && (
+                    {user.role === 'admin' && (
                       <DropdownMenuItem onClick={() => navigate('/dashboard/admin')}>
                         <Shield className="mr-2 h-4 w-4" />
                         <span>Panel Administrador</span>

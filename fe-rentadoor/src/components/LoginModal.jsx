@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
-import axios from 'axios';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const LoginModal = ({ isOpen, onOpenChange }) => {
   const [email, setEmail] = useState('');
@@ -21,8 +21,7 @@ const LoginModal = ({ isOpen, onOpenChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const { toast } = useToast();
-
-  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
+  const { login } = useAuthContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,21 +37,11 @@ const LoginModal = ({ isOpen, onOpenChange }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/auth/signin`, {
-        email,
-        password,
-      }, {
-        withCredentials: true
-      });
-
-      // Guardar usuario en localStorage como antes
-      localStorage.setItem('currentUser_rentadoor', JSON.stringify(response.data.user));
-      
-      window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
+      await login(email, password);
 
       toast({
         title: '¡Inicio de sesión exitoso!',
-        description: `Bienvenido de nuevo, ${response.data.user.name}.`,
+        description: 'Bienvenido de nuevo.',
       });
 
       setEmail('');

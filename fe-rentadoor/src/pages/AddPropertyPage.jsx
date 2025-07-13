@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import { UploadCloud, PlusCircle, Trash2, DollarSign, BedDouble, Bath, Car, Home } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const fileToDataUrl = (file) => {
   return new Promise((resolve, reject) => {
@@ -22,7 +23,7 @@ const fileToDataUrl = (file) => {
 const AddPropertyPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user } = useAuthContext();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,27 +39,16 @@ const AddPropertyPage = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      if (user.identityStatus !== 'Verified') {
-        toast({
-          title: "Verificación Requerida",
-          description: "Debes verificar tu identidad para agregar una propiedad.",
-          variant: "destructive",
-        });
-        navigate('/dashboard/verificar-identidad');
-      }
-    } else {
+    if (!user) {
       toast({
         title: "Acceso Denegado",
         description: "Debes iniciar sesión para agregar una propiedad.",
         variant: "destructive",
       });
       navigate('/');
+      return;
     }
-  }, [navigate, toast]);
+  }, [user, navigate, toast]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -112,7 +102,7 @@ const AddPropertyPage = () => {
 
     const newProperty = {
       id: Date.now(), 
-      ownerId: currentUser ? currentUser.id : 'unknown_owner',
+      ownerId: user ? user.id : 'unknown_owner',
       title,
       description,
       location,
@@ -150,7 +140,7 @@ const AddPropertyPage = () => {
     }
   };
 
-  if (!currentUser) {
+  if (!user) {
     return null; 
   }
 
@@ -199,58 +189,58 @@ const AddPropertyPage = () => {
                       <SelectValue placeholder="Seleccionar moneda" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ARS">ARS ($)</SelectItem>
-                      <SelectItem value="USD">USD (U$S)</SelectItem>
+                      <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
+                      <SelectItem value="USD">USD - Dólar Estadounidense</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="expensePrice" className="text-slate-700">Precio de Expensas (ARS) (Opcional)</Label>
-                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input id="expensePrice" type="number" value={expensePrice} onChange={(e) => setExpensePrice(e.target.value)} placeholder="Ej: 15000" className="pl-8" />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="environments" className="text-slate-700">Ambientes</Label>
+                  <Label htmlFor="expensePrice" className="text-slate-700">Precio de Expensas (Opcional)</Label>
                   <div className="relative">
-                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="environments" type="number" value={environments} onChange={(e) => setEnvironments(e.target.value)} placeholder="Ej: 3" className="pl-8" />
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input id="expensePrice" type="number" value={expensePrice} onChange={(e) => setExpensePrice(e.target.value)} placeholder="Ej: 15000" className="pl-8" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="environments" className="text-slate-700">Ambientes</Label>
+                  <Input id="environments" type="number" value={environments} onChange={(e) => setEnvironments(e.target.value)} placeholder="Ej: 3" min="1" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="bathrooms" className="text-slate-700">Baños</Label>
                   <div className="relative">
                     <Bath className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="bathrooms" type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} placeholder="Ej: 2" className="pl-8" />
+                    <Input id="bathrooms" type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} placeholder="Ej: 2" min="1" className="pl-8" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="garages" className="text-slate-700">Cocheras</Label>
                   <div className="relative">
                     <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="garages" type="number" value={garages} onChange={(e) => setGarages(e.target.value)} placeholder="Ej: 1" className="pl-8" />
+                    <Input id="garages" type="number" value={garages} onChange={(e) => setGarages(e.target.value)} placeholder="Ej: 1" min="0" className="pl-8" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="guests" className="text-slate-700">Máx. Huéspedes</Label>
-                   <div className="relative">
+                  <Label htmlFor="guests" className="text-slate-700">Huéspedes Máximos</Label>
+                  <div className="relative">
                     <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="guests" type="number" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="Ej: 4" className="pl-8"/>
+                    <Input id="guests" type="number" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="Ej: 4" min="1" className="pl-8" />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-slate-700">Imágenes de la Propiedad (Máx. 5)</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
-                  {imagePreviews.map((src, index) => (
+              <div className="space-y-4">
+                <Label className="text-slate-700">Imágenes de la Propiedad</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative group aspect-square">
-                      <img-replace src={src} alt={`Vista previa ${index + 1}`} className="w-full h-full object-cover rounded-md border" />
+                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg border" />
                       <Button
                         type="button"
                         variant="destructive"
@@ -262,27 +252,30 @@ const AddPropertyPage = () => {
                       </Button>
                     </div>
                   ))}
-                  {imageFiles.length < 5 && (
+                  {imagePreviews.length < 5 && (
                     <Label
                       htmlFor="image-upload"
-                      className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-md cursor-pointer hover:border-slate-400 transition-colors"
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 transition-colors aspect-square"
                     >
-                      <UploadCloud className="h-8 w-8 text-slate-400 mb-1" />
-                      <span className="text-xs text-slate-500">Subir Imagen</span>
+                      <UploadCloud className="h-8 w-8 text-slate-400" />
+                      <span className="text-sm text-slate-600 mt-2">Agregar imagen</span>
                     </Label>
                   )}
                 </div>
-                <Input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                {imageFiles.length > 0 && <p className="text-xs text-slate-500">{imageFiles.length} de 5 imágenes seleccionadas.</p>}
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
               </div>
-
             </CardContent>
-            <CardFooter className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/dashboard/propietario')}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-slate-800 hover:bg-slate-700">
-                <PlusCircle className="mr-2 h-4 w-4" /> Publicar Propiedad
+            <CardFooter>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Agregar Propiedad
               </Button>
             </CardFooter>
           </form>
