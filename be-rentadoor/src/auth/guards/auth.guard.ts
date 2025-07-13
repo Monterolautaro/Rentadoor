@@ -33,7 +33,7 @@ import {
           id: payload.id,
           email: payload.email,
           verified: payload.verified,
-          rol: payload.rol 
+          rol: payload.role 
         };
   
         return true;

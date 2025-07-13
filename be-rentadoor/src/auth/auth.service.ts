@@ -1,11 +1,11 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { AuthRepository } from "./auth.repository";
-import { LoginDto } from "src/dtos/login.dto";
-import { SignUpDto } from "src/dtos/signup.dto";
+import { LoginDto } from "../dtos/login.dto";
+import { SignUpDto } from "../dtos/signup.dto";
 import * as bcrypt from 'bcrypt';
-import { Roles } from "src/common/enums/roles.enum";
+import { Roles } from "../common/enums/roles.enum";
 import { JwtService } from "@nestjs/jwt";
-import { EmailService } from "src/email/email.service";
+import { EmailService } from "../email/email.service";
 
 @Injectable()
 export class AuthService {
@@ -28,7 +28,6 @@ export class AuthService {
         if (!result) {
             throw new NotFoundException('User not found');
         }
-        console.log();
         
         const isPasswordValid = await bcrypt.compare(password, result.contraseña);
       
@@ -54,7 +53,8 @@ export class AuthService {
                 email: result.email,
                 phone: result.telefono,
                 role: result.rol,
-                isEmailVerified: result.isEmailVerified
+                isEmailVerified: result.isEmailVerified,
+                identityVerificationStatus: result.identityVerificationStatus || 'not_verified'
             }
         };
     }
@@ -155,7 +155,8 @@ export class AuthService {
                 email: user.email,
                 phone: user.telefono,
                 role: user.rol,
-                isEmailVerified: user.isEmailVerified
+                isEmailVerified: user.isEmailVerified,
+                identityVerificationStatus: user.identityVerificationStatus || 'not_verified'
             };
         } catch (error) {
             throw new UnauthorizedException('Invalid token');
@@ -364,6 +365,40 @@ export class AuthService {
             }
         } catch (error) {
             throw new BadRequestException('Error sending verification email');
+        }
+    }
+
+    async approveIdentityVerification(userId: string) {
+        try {
+            const result = await this.authRepository.approveIdentityVerification(userId);
+            
+            if (!result) {
+                throw new BadRequestException('Error approving identity verification');
+            }
+
+            return {
+                success: true,
+                message: 'Identity verification approved successfully'
+            };
+        } catch (error) {
+            throw new BadRequestException('Error approving identity verification');
+        }
+    }
+
+    async rejectIdentityVerification(userId: string) {
+        try {
+            const result = await this.authRepository.rejectIdentityVerification(userId);
+            
+            if (!result) {
+                throw new BadRequestException('Error rejecting identity verification');
+            }
+
+            return {
+                success: true,
+                message: 'Identity verification rejected successfully'
+            };
+        } catch (error) {
+            throw new BadRequestException('Error rejecting identity verification');
         }
     }
 }

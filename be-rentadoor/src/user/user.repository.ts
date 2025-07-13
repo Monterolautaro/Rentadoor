@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { IUser } from "src/interfaces/user.interface";
-import { SupabaseService } from "src/supabase/supabase.service";
+import { IUser } from "../interfaces/user.interface";
+import { SupabaseService } from "../supabase/supabase.service";
 
 
 

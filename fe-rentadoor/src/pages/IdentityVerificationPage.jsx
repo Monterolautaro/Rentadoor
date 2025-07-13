@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import { UploadCloud, Camera, FileImage, Trash2, ChevronLeft, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const IdentityVerificationPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthContext();
   const [selfie, setSelfie] = useState(null);
   const [dni, setDni] = useState(null);
   const [selfiePreview, setSelfiePreview] = useState(null);
@@ -48,16 +50,18 @@ const IdentityVerificationPage = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Usuario no autenticado",
+        description: "Debes iniciar sesión para verificar tu identidad.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const storedUser = localStorage.getItem('currentUser_rentadoor');
-      if (!storedUser) {
-        throw new Error('Usuario no autenticado');
-      }
-
-      const user = JSON.parse(storedUser);
-      
       const formData = new FormData();
       formData.append('files', selfie);
       formData.append('files', dni);
@@ -69,29 +73,31 @@ const IdentityVerificationPage = () => {
         withCredentials: true
       });
 
-      const verificationResponse = await axios.post(`${API_URL}/admin/identity-verifications`, {
-        selfieFileId: uploadResponse.data.selfie.id,
-        dniFileId: uploadResponse.data.dni.id,
-        status: 'pending'
-      }, {
-        withCredentials: true
-      });
-
-      user.identityStatus = 'Pending';
-      localStorage.setItem('currentUser_rentadoor', JSON.stringify(user));
-      window.dispatchEvent(new Event('storage'));
-
       toast({
         title: "¡Documentos Enviados!",
         description: "Hemos recibido tus documentos. La verificación puede tardar hasta 24 horas.",
       });
 
+      window.location.reload();
+
       navigate('/dashboard/inquilino');
     } catch (error) {
       console.error('Error uploading files:', error);
+      
+      // Extraer el mensaje de error del backend
+      let errorMessage = "No se pudieron subir los archivos. Intenta nuevamente.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error al subir archivos",
-        description: error.response?.data?.message || "No se pudieron subir los archivos. Intenta nuevamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

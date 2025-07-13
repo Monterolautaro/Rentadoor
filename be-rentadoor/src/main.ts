@@ -1,17 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import * as cookieParser from 'cookie-parser';
 import 'dotenv/config';
 
-const allowedOrigins = process.env.URL_FRONT?.split(',') || [];
+const allowedOrigins = process.env.URL_FRONT?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Configurar cookie-parser
+  app.use(cookieParser());
+  
   app.enableCors({
     origin: allowedOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     credentials: true,
+    exposedHeaders: ['Set-Cookie'],
   });
 
   app.useGlobalPipes(new ValidationPipe({

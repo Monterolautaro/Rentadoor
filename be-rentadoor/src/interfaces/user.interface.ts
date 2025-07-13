@@ -1,5 +1,4 @@
-import { Roles } from "src/common/enums/roles.enum";
-
+import { Roles } from "../common/enums/roles.enum";
 
 export interface IUser {
     id: number,
@@ -8,5 +7,6 @@ export interface IUser {
     telefono: string,
     contraseña: string,
     rol: Roles,
-    isEmailVerified: boolean
+    isEmailVerified: boolean,
+    identityVerificationStatus?: string
 }

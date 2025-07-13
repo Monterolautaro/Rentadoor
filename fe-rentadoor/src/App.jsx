@@ -18,23 +18,31 @@ import { Toaster } from '@/components/ui/toaster';
 import EmailConfirmationPage from '@/pages/EmailConfirmationPage';
 import EmailVerificationPage from '@/pages/EmailVerificationPage';
 import EmailVerificationRequiredPage from '@/pages/EmailVerificationRequiredPage';
+import { AuthProvider, useAuthContext } from '@/contexts/AuthContext';
 
-const App = () => {
+const AppRoutes = () => {
+  const { user, loading } = useAuthContext();
+
   const ProtectedRoute = ({ children }) => {
-    const currentUser = localStorage.getItem('currentUser_rentadoor');
-    if (!currentUser) {
+    if (loading) {
+      return <div className="flex justify-center items-center h-screen">Cargando...</div>;
+    }
+    
+    if (!user) {
       return <Navigate to="/" replace />;
     }
     return children;
   };
 
   const EmailVerifiedRoute = ({ children }) => {
-    const currentUser = localStorage.getItem('currentUser_rentadoor');
-    if (!currentUser) {
+    if (loading) {
+      return <div className="flex justify-center items-center h-screen">Cargando...</div>;
+    }
+    
+    if (!user) {
       return <Navigate to="/" replace />;
     }
     
-    const user = JSON.parse(currentUser);
     if (!user.isEmailVerified) {
       return <Navigate to="/verificar-email-requerido" replace />;
     }
@@ -43,12 +51,14 @@ const App = () => {
   };
 
   const AdminRoute = ({ children }) => {
-    const currentUser = localStorage.getItem('currentUser_rentadoor');
-    if (!currentUser) {
+    if (loading) {
+      return <div className="flex justify-center items-center h-screen">Cargando...</div>;
+    }
+    
+    if (!user) {
       return <Navigate to="/" replace />;
     }
     
-    const user = JSON.parse(currentUser);
     if (user.role !== 'admin') {
       return <Navigate to="/" replace />;
     }
@@ -168,6 +178,14 @@ const App = () => {
       </main>
       <Toaster />
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 };
 
