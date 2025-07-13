@@ -57,4 +57,31 @@ export class StorageRepository {
         if (error) throw new Error(`Download failed: ${error.message}`);
         return Buffer.from(await data.arrayBuffer());
     }
+
+    async uploadPropertyImageToSupabase(storagePath: string, data: Buffer) {
+        const supabase = this.supabaseService.getClient();
+        const { error } = await supabase.storage
+            .from('properties')
+            .upload(storagePath, data);
+
+        if (error) throw new Error(`Property image upload failed: ${error.message}`);
+    }
+
+    async getPublicUrl(storagePath: string): Promise<string> {
+        const supabase = this.supabaseService.getClient();
+        const { data } = supabase.storage
+            .from('properties')
+            .getPublicUrl(storagePath);
+
+        return data.publicUrl;
+    }
+
+    async deleteFromSupabase(storagePath: string) {
+        const supabase = this.supabaseService.getClient();
+        const { error } = await supabase.storage
+            .from('properties')
+            .remove([storagePath]);
+
+        if (error) throw new Error(`Delete failed: ${error.message}`);
+    }
 }

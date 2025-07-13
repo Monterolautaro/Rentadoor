@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { IUser } from "../interfaces/user.interface";
+import { IUser } from "./interfaces/user.interface";
 import { SupabaseService } from "../supabase/supabase.service";
 
 

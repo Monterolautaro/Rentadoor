@@ -13,6 +13,7 @@ import {
     Req,
     BadRequestException,
     ConflictException,
+    Delete,
 } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -85,6 +86,61 @@ export class StorageController {
         const updateResult = await this.authRepository.updateIdentityVerificationStatus(userId, 'pending');
 
         return { selfie: selfieRecord, dni: dniRecord };
+    }
+
+    @Post('upload-property-images')
+    @UseGuards(AuthGuard)
+    @UseInterceptors(FilesInterceptor('images', 10))
+    async uploadPropertyImages(
+        @UploadedFiles(new ParseFilePipe({
+            validators: [
+              new MaxFileSizeValidator({
+                maxSize: 5000000 /* 5mb */,
+                message: 'file is too heavy',
+              }),
+            ],
+            fileIsRequired: true,
+          }),) files: Multer.File[],
+        @Req() req: RequestWithUser
+    ) {
+        if (!files || files.length === 0) {
+            throw new BadRequestException('Debes subir al menos una imagen');
+        }
+
+        if (files.length > 10) {
+            throw new BadRequestException('Puedes subir un máximo de 10 imágenes');
+        }
+
+        const userId = req.user.id;
+        const uploadedImages: string[] = [];
+
+        for (const file of files) {
+            const imageUrl = await this.storageService.uploadPropertyImage(
+                file.buffer,
+                userId,
+                file.originalname
+            );
+            uploadedImages.push(imageUrl);
+        }
+
+        return { images: uploadedImages };
+    }
+
+    @Get('property-image/:imageName')
+    async getPropertyImage(@Param('imageName') imageName: string) {
+        const imageUrl = await this.storageService.getPropertyImageUrl(imageName);
+        return { url: imageUrl };
+    }
+
+    @Delete('property-image/:imageName')
+    @UseGuards(AuthGuard)
+    async deletePropertyImage(
+        @Param('imageName') imageName: string,
+        @Req() req: RequestWithUser
+    ) {
+        const userId = req.user.id;
+        await this.storageService.deletePropertyImage(imageName, userId);
+        return { message: 'Imagen eliminada correctamente' };
     }
 
     @Get()
