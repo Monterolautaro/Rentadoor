@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { UploadCloud, Camera, FileImage, Trash2, ChevronLeft, ShieldCheck } from 'lucide-react';
+import axios from 'axios';
 
 const IdentityVerificationPage = () => {
   const navigate = useNavigate();
@@ -15,6 +16,9 @@ const IdentityVerificationPage = () => {
   const [dni, setDni] = useState(null);
   const [selfiePreview, setSelfiePreview] = useState(null);
   const [dniPreview, setDniPreview] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
   const handleFileChange = (e, setFile, setPreview) => {
     const file = e.target.files[0];
@@ -33,7 +37,7 @@ const IdentityVerificationPage = () => {
     setPreview(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selfie || !dni) {
       toast({
@@ -44,9 +48,35 @@ const IdentityVerificationPage = () => {
       return;
     }
 
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
+    setIsLoading(true);
+
+    try {
+      const storedUser = localStorage.getItem('currentUser_rentadoor');
+      if (!storedUser) {
+        throw new Error('Usuario no autenticado');
+      }
+
       const user = JSON.parse(storedUser);
+      
+      const formData = new FormData();
+      formData.append('files', selfie);
+      formData.append('files', dni);
+
+      const uploadResponse = await axios.post(`${API_URL}/storage/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: true
+      });
+
+      const verificationResponse = await axios.post(`${API_URL}/admin/identity-verifications`, {
+        selfieFileId: uploadResponse.data.selfie.id,
+        dniFileId: uploadResponse.data.dni.id,
+        status: 'pending'
+      }, {
+        withCredentials: true
+      });
+
       user.identityStatus = 'Pending';
       localStorage.setItem('currentUser_rentadoor', JSON.stringify(user));
       window.dispatchEvent(new Event('storage'));
@@ -56,22 +86,16 @@ const IdentityVerificationPage = () => {
         description: "Hemos recibido tus documentos. La verificación puede tardar hasta 24 horas.",
       });
 
-      // Simulación de aprobación
-      setTimeout(() => {
-        const latestUser = JSON.parse(localStorage.getItem('currentUser_rentadoor'));
-        if (latestUser && latestUser.id === user.id) {
-          latestUser.identityStatus = 'Verified';
-          localStorage.setItem('currentUser_rentadoor', JSON.stringify(latestUser));
-          window.dispatchEvent(new Event('storage'));
-          toast({
-            title: "¡Identidad Verificada!",
-            description: "Tu identidad ha sido verificada exitosamente. ¡Ya puedes usar todas las funciones!",
-            className: "bg-green-100 border-green-300 text-green-800",
-          });
-        }
-      }, 5000);
-
       navigate('/dashboard/inquilino');
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast({
+        title: "Error al subir archivos",
+        description: error.response?.data?.message || "No se pudieron subir los archivos. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,7 +104,7 @@ const IdentityVerificationPage = () => {
       <Label className="text-slate-700 font-semibold">{title}</Label>
       {preview ? (
         <div className="relative group aspect-video">
-          <img-replace src={preview} alt={`${title} preview`} className="w-full h-full object-cover rounded-md border" />
+          <img src={preview} alt={`${title} preview`} className="w-full h-full object-cover rounded-md border" />
           <Button
             type="button"
             variant="destructive"
@@ -145,8 +169,9 @@ const IdentityVerificationPage = () => {
               )}
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500">
-                <UploadCloud className="mr-2 h-4 w-4" /> Enviar para Verificación
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500" disabled={isLoading}>
+                <UploadCloud className="mr-2 h-4 w-4" /> 
+                {isLoading ? 'Enviando...' : 'Enviar para Verificación'}
               </Button>
             </CardFooter>
           </form>
