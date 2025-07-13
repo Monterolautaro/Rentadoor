@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpException, HttpStatus, Res, Get, Req, Query, Put } from "@nestjs/common";
+import { Body, Controller, Post, HttpException, HttpStatus, Res, Get, Req, Query, Put, UseGuards } from "@nestjs/common";
 import { Response, Request } from 'express';
 import { AuthService } from "./auth.service";
 import { LoginDto } from "src/dtos/login.dto";
@@ -8,6 +8,7 @@ import { SignUpDto } from "src/dtos/signup.dto";
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
+    @UseGuards()
     @Get('/me')
     async getCurrentUser(@Req() req: Request): Promise<any> {
         try {

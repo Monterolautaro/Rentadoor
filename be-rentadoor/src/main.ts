@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
-
+import 'dotenv/config';
 
 const allowedOrigins = process.env.URL_FRONT?.split(',') || [];
 
