@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import HomePage from '@/pages/HomePage';
 import UserDashboardPage from '@/pages/UserDashboardPage';
 import OwnerDashboardPage from '@/pages/OwnerDashboardPage';
+import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import AddPropertyPage from '@/pages/AddPropertyPage';
 import EditPropertyPage from '@/pages/EditPropertyPage';
 import PropertyDetailPage from '@/pages/PropertyDetailPage';
@@ -36,6 +37,20 @@ const App = () => {
     const user = JSON.parse(currentUser);
     if (!user.isEmailVerified) {
       return <Navigate to="/verificar-email-requerido" replace />;
+    }
+    
+    return children;
+  };
+
+  const AdminRoute = ({ children }) => {
+    const currentUser = localStorage.getItem('currentUser_rentadoor');
+    if (!currentUser) {
+      return <Navigate to="/" replace />;
+    }
+    
+    const user = JSON.parse(currentUser);
+    if (user.role !== 'admin') {
+      return <Navigate to="/" replace />;
     }
     
     return children;
@@ -87,6 +102,16 @@ const App = () => {
                 <EmailVerifiedRoute>
                   <OwnerDashboardPage />
                 </EmailVerifiedRoute>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin" 
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <AdminDashboardPage />
+                </AdminRoute>
               </ProtectedRoute>
             } 
           />

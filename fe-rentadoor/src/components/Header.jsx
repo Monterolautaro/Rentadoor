@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard, Mail, CheckCircle } from 'lucide-react';
+import { Home, User, LogIn, UserPlus, LogOut, ChevronDown, Building, LayoutDashboard, Mail, CheckCircle, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import RegisterModal from '@/components/RegisterModal';
@@ -181,6 +181,12 @@ const Header = () => {
                       <Building className="mr-2 h-4 w-4" />
                       <span>Panel Propietario</span>
                     </DropdownMenuItem>
+                    {currentUser.role === 'admin' && (
+                      <DropdownMenuItem onClick={() => navigate('/dashboard/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Panel Administrador</span>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
