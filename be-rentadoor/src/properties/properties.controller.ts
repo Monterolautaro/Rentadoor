@@ -25,7 +25,8 @@ export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
+  @UseGuards(AuthGuard, RolesGuard)
   async create(@Body() createPropertyDto: CreatePropertyDto, @Req() req: IRequestWithUser) {
     const ownerId = parseInt(req.user.id);
     return this.propertiesService.create(createPropertyDto, ownerId);
@@ -45,7 +46,8 @@ export class PropertiesController {
   }
 
   @Get('my-properties')
-  @UseGuards(AuthGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
+  @UseGuards(AuthGuard, RolesGuard)
   async findMyProperties(@Req() req: IRequestWithUser) {
     const ownerId = parseInt(req.user.id);
     return this.propertiesService.findByOwner(ownerId);
@@ -57,7 +59,8 @@ export class PropertiesController {
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
+  @UseGuards(AuthGuard, RolesGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePropertyDto: UpdatePropertyDto,
@@ -68,15 +71,16 @@ export class PropertiesController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
+  @UseGuards(AuthGuard, RolesGuard)
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: IRequestWithUser) {
     const userId = parseInt(req.user.id);
     return this.propertiesService.remove(id, userId);
   }
 
   @Get('admin/all')
-  @UseGuards(AuthGuard, RolesGuard)
   @RolesDecorator(Roles.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
   async getAllPropertiesForAdmin() {
     return this.propertiesService.findAll();
   }

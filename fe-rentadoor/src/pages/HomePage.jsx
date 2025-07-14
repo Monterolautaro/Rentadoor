@@ -2,77 +2,75 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import SearchBar from '@/components/SearchBar';
 import PropertyCard from '@/components/PropertyCard';
+import { useProperties } from '@/hooks/useProperties';
 
 const HomePage = () => {
-  const [allProperties, setAllProperties] = useState([]);
+  const { properties, loading, loadAvailableProperties, searchProperties } = useProperties();
   const [filteredProperties, setFilteredProperties] = useState([]);
   const [activeFilters, setActiveFilters] = useState({});
 
+  // Mock properties para mostrar mientras no hay datos reales
   const mockProperties = [
-    { id: "mock-1", ownerId: "mock-owner", title: "Moderno Loft en Palermo", location: "Palermo, Buenos Aires", monthlyRent: 150000, currency: "ARS", type: "Departamento", environments: 2, bathrooms: 2, garages: 1, rating: 4.8, guests: 4, bedrooms: 1, description: "Hermoso loft moderno con todas las comodidades en el corazón de Palermo.", image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-2", ownerId: "mock-owner", title: "Elegante Apartamento en Recoleta", location: "Recoleta, Buenos Aires", monthlyRent: 900, currency: "USD", type: "Departamento", environments: 3, bathrooms: 2, garages: 1, rating: 4.9, guests: 6, bedrooms: 2, description: "Apartamento elegante y espacioso en una de las zonas más exclusivas de Buenos Aires.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-3", ownerId: "mock-owner", title: "Acogedor PH en San Telmo", location: "San Telmo, Buenos Aires", monthlyRent: 95000, currency: "ARS", type: "PH", environments: 3, bathrooms: 1, garages: 0, rating: 4.6, guests: 3, bedrooms: 2, description: "Estudio acogedor en el histórico barrio de San Telmo.", image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-4", ownerId: "mock-owner", title: "Casa con Jardín en Belgrano", location: "Belgrano, Buenos Aires", monthlyRent: 1500, currency: "USD", type: "Casa", environments: 5, bathrooms: 3, garages: 2, rating: 5.0, guests: 8, bedrooms: 4, description: "Increíble casa con jardín y piscina en el tranquilo barrio de Belgrano R.", image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-1", owner_id: "mock-owner", title: "Moderno Loft en Palermo", location: "Palermo, Buenos Aires", monthly_rent: 150000, currency: "ARS", type: "Departamento", environments: 2, bathrooms: 2, garages: 1, rating: 4.8, guests: 4, bedrooms: 1, description: "Hermoso loft moderno con todas las comodidades en el corazón de Palermo.", image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-2", owner_id: "mock-owner", title: "Elegante Apartamento en Recoleta", location: "Recoleta, Buenos Aires", monthly_rent: 900, currency: "USD", type: "Departamento", environments: 3, bathrooms: 2, garages: 1, rating: 4.9, guests: 6, bedrooms: 2, description: "Apartamento elegante y espacioso en una de las zonas más exclusivas de Buenos Aires.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-3", owner_id: "mock-owner", title: "Acogedor PH en San Telmo", location: "San Telmo, Buenos Aires", monthly_rent: 95000, currency: "ARS", type: "PH", environments: 3, bathrooms: 1, garages: 0, rating: 4.6, guests: 3, bedrooms: 2, description: "Estudio acogedor en el histórico barrio de San Telmo.", image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-4", owner_id: "mock-owner", title: "Casa con Jardín en Belgrano", location: "Belgrano, Buenos Aires", monthly_rent: 1500, currency: "USD", type: "Casa", environments: 5, bathrooms: 3, garages: 2, rating: 5.0, guests: 8, bedrooms: 4, description: "Increíble casa con jardín y piscina en el tranquilo barrio de Belgrano R.", image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
   ];
 
-  const loadProperties = () => {
-    const storedProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-    const processedStoredProperties = storedProperties.map(p => ({
-      ...p,
-      allImages: Array.isArray(p.allImages) ? p.allImages : (p.image ? [p.image] : []),
-      type: p.type || 'Departamento'
+  // Función para normalizar propiedades (convertir campos de API a formato frontend)
+  const normalizeProperties = (properties) => {
+    return properties.map(prop => ({
+      ...prop,
+      // Mapear campos de API a formato frontend
+      monthlyRent: prop.monthly_rent || prop.monthlyRent,
+      allImages: prop.all_images || prop.allImages || (prop.image ? [prop.image] : []),
+      type: prop.type || 'Departamento',
+      // Asegurar que los campos existan
+      rating: prop.rating || 0,
+      guests: prop.guests || 1,
+      bedrooms: prop.bedrooms || 1,
     }));
-    
-    const combined = [...mockProperties.map(p => ({...p, allImages: Array.isArray(p.allImages) ? p.allImages : (p.image ? [p.image] : [])})), 
-                      ...processedStoredProperties.filter(sp => !mockProperties.find(mp => mp.id === sp.id))];
-    setAllProperties(combined);
-    setFilteredProperties(combined.filter(p => p.status === "Disponible"));
   };
 
+  // Cargar propiedades al montar el componente
   useEffect(() => {
-    loadProperties();
-    const handlePropertiesChanged = () => { loadProperties(); };
-    window.addEventListener('propertiesChanged_rentadoor', handlePropertiesChanged);
-    return () => { window.removeEventListener('propertiesChanged_rentadoor', handlePropertiesChanged); };
-  }, []);
+    const loadInitialProperties = async () => {
+      try {
+        await loadAvailableProperties();
+      } catch (error) {
+        console.error('Error loading properties:', error);
+        // Si falla la API, usar mock properties
+        setFilteredProperties(normalizeProperties(mockProperties));
+      }
+    };
+
+    loadInitialProperties();
+  }, [loadAvailableProperties]);
+
+  // Actualizar propiedades filtradas cuando cambien las propiedades
+  useEffect(() => {
+    const normalizedProps = normalizeProperties(properties);
+    setFilteredProperties(normalizedProps.filter(p => p.status === "Disponible"));
+  }, [properties]);
 
   const handleSearch = useCallback((filters) => {
     setActiveFilters(filters);
     
-    let properties = allProperties.filter(p => p.status === "Disponible");
+    // Si hay filtros, usar la API de búsqueda
+    if (Object.keys(filters).length > 0) {
+      searchProperties(filters);
+    } else {
+      // Si no hay filtros, cargar propiedades disponibles
+      loadAvailableProperties();
+    }
+  }, [searchProperties, loadAvailableProperties]);
 
-    if (filters.searchTerm) {
-      properties = properties.filter(p =>
-        p.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        p.location.toLowerCase().includes(filters.searchTerm.toLowerCase())
-      );
-    }
-    if (filters.propertyType) {
-      properties = properties.filter(p => p.type === filters.propertyType);
-    }
-    if (filters.environments) {
-        if(filters.environments === '4') {
-             properties = properties.filter(p => p.environments >= 4);
-        } else {
-             properties = properties.filter(p => p.environments === parseInt(filters.environments));
-        }
-    }
-    if (filters.barrio) {
-      properties = properties.filter(p => p.location.toLowerCase().includes(filters.barrio.toLowerCase()));
-    }
-    if(filters.minPrice || filters.maxPrice) {
-        properties = properties.filter(p => p.currency === filters.currency);
-    }
-    if (filters.minPrice) {
-      properties = properties.filter(p => p.monthlyRent >= parseFloat(filters.minPrice));
-    }
-    if (filters.maxPrice) {
-      properties = properties.filter(p => p.monthlyRent <= parseFloat(filters.maxPrice));
-    }
+  // Combinar propiedades de API con mock properties si no hay datos
+  const allProperties = properties.length > 0 
+    ? normalizeProperties(properties)
+    : normalizeProperties(mockProperties);
 
-    setFilteredProperties(properties);
-  }, [allProperties]);
-
+  const availableProperties = allProperties.filter(p => p.status === "Disponible");
 
   return (
     <>
@@ -115,11 +113,20 @@ const HomePage = () => {
               transition={{ duration: 0.5 }}
               className="text-gray-600"
             >
-              {filteredProperties.length} propiedades encontradas
+              {loading ? 'Cargando...' : `${availableProperties.length} propiedades encontradas`}
             </motion.p>
           </div>
 
-          {filteredProperties.length === 0 ? (
+          {loading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-16"
+            >
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-xl text-gray-500 mt-4">Cargando propiedades...</p>
+            </motion.div>
+          ) : availableProperties.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -131,7 +138,7 @@ const HomePage = () => {
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredProperties.map((property, index) => (
+              {availableProperties.map((property, index) => (
                 <motion.div
                   key={property.id}
                   initial={{ opacity: 0, y: 20 }}

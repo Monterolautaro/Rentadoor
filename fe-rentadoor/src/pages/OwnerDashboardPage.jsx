@@ -5,24 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle, Eye } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useProperties } from '@/hooks/useProperties';
 
 const OwnerDashboardPage = () => {
-  const [properties, setProperties] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuthContext();
   const navigate = useNavigate();
+  const { properties, loadMyProperties, loading: propertiesLoading } = useProperties();
 
   useEffect(() => {
-    // Por ahora, como no existen los endpoints de propiedades y reservas, usamos datos locales
     const fetchData = async () => {
       try {
-        // Simular carga de datos
+        setLoading(true);
+        
+        // Cargar propiedades del usuario
+        await loadMyProperties();
+        
+        // Por ahora, como no existe el endpoint de reservas, usamos datos locales
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setProperties([]);
         setReservations([]);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -39,13 +43,16 @@ const OwnerDashboardPage = () => {
     if (user) {
       fetchData();
     }
-  }, [user, toast]);
+  }, [user, loadMyProperties, toast]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
       active: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
       inactive: { color: 'bg-red-100 text-red-800', icon: AlertCircle },
+      'Disponible': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      'Ocupado': { color: 'bg-red-100 text-red-800', icon: AlertCircle },
+      'Mantenimiento': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
     };
 
     const config = statusConfig[status] || statusConfig.pending;
@@ -63,7 +70,11 @@ const OwnerDashboardPage = () => {
     navigate('/dashboard/propietario/agregar');
   };
 
-  if (loading) {
+  const handleViewProperty = (propertyId) => {
+    navigate(`/propiedad/${propertyId}`);
+  };
+
+  if (loading || propertiesLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
@@ -217,16 +228,33 @@ const OwnerDashboardPage = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Precio:</span>
-                          <span className="font-semibold text-green-600">
-                            ${property.price}/mes
-                          </span>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Precio:</span>
+                            <span className="font-semibold text-green-600">
+                              ${property.monthly_rent || property.monthlyRent}/mes
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Tipo:</span>
+                            <span>{property.type || 'Departamento'}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Ambientes:</span>
+                            <span>{property.environments || property.bedrooms || 1}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Tipo:</span>
-                          <span>{property.type}</span>
+                        <div className="flex justify-end">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewProperty(property.id)}
+                            className="flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Ver detalles
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -248,23 +276,23 @@ const OwnerDashboardPage = () => {
                       No hay reservas aún
                     </h3>
                     <p className="text-slate-600">
-                      Las reservas aparecerán aquí cuando los inquilinos reserven tus propiedades
+                      Las reservas aparecerán aquí cuando los usuarios reserven tus propiedades
                     </p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
-                {reservations.slice(0, 5).map((reservation) => (
+                {reservations.map((reservation) => (
                   <Card key={reservation.id}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{reservation.property.title}</CardTitle>
+                          <CardTitle className="text-lg">{reservation.propertyTitle}</CardTitle>
                           <CardDescription>
                             <div className="flex items-center gap-2 text-sm mt-1">
                               <Users className="h-4 w-4" />
-                              {reservation.user.name}
+                              {reservation.userName}
                             </div>
                           </CardDescription>
                         </div>
@@ -274,16 +302,12 @@ const OwnerDashboardPage = () => {
                     <CardContent>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Check-in:</span>
-                          <span>{new Date(reservation.checkIn).toLocaleDateString()}</span>
+                          <span className="text-slate-600">Fecha:</span>
+                          <span>{reservation.date}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Check-out:</span>
-                          <span>{new Date(reservation.checkOut).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-semibold">
-                          <span>Total:</span>
-                          <span className="text-green-600">
+                          <span className="text-slate-600">Total:</span>
+                          <span className="font-semibold text-green-600">
                             ${reservation.totalPrice}
                           </span>
                         </div>

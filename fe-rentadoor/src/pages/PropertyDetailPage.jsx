@@ -4,43 +4,26 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { MapPin, Users, Home, Bath, Car, DollarSign, ChevronLeft, ChevronRight, MessageSquare, BedDouble, CalendarCheck } from 'lucide-react';
+import { MapPin, Users, Home, Bath, Car, DollarSign, ChevronLeft, ChevronRight, MessageSquare, BedDouble, CalendarCheck, Edit, Settings } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useProperties } from '@/hooks/useProperties';
 
 const PropertyDetailPage = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthContext();
+  const { getPropertyById, loading } = useProperties();
   const [property, setProperty] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
-    const fetchProperty = () => {
-      setLoading(true);
-      const allProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-      const mockProperties = [
-        { id: "mock-1", ownerId: "mock-owner", title: "Moderno Loft en Palermo", location: "Palermo, Buenos Aires", price: 85000, currency: "ARS", rating: 4.8, guests: 4, bedrooms: 2, description: "Hermoso loft moderno con todas las comodidades en el corazón de Palermo. Perfecto para parejas o familias pequeñas.", image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", "https://images.unsplash.com/photo-1505691938895-1758d7feb511?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", "https://images.unsplash.com/photo-1493809842344-ab619ba68aef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-        { id: "mock-2", ownerId: "mock-owner", title: "Elegante Apartamento en Recoleta", location: "Recoleta, Buenos Aires", price: 120000, currency: "ARS", rating: 4.9, guests: 6, bedrooms: 3, description: "Apartamento elegante y espacioso en una de las zonas más exclusivas de Buenos Aires. Vista panorámica de la ciudad.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-        { id: "mock-3", ownerId: "mock-owner", title: "Acogedor Estudio en San Telmo", location: "San Telmo, Buenos Aires", price: 55000, currency: "ARS", rating: 4.6, guests: 2, bedrooms: 1, description: "Estudio acogedor en el histórico barrio de San Telmo. Ideal para parejas que buscan autenticidad porteña.", image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-        { id: "mock-4", ownerId: "mock-owner", title: "Penthouse con Vista al Río", location: "Puerto Madero, Buenos Aires", price: 950, currency: "USD", rating: 5.0, guests: 8, bedrooms: 4, description: "Increíble penthouse con vista panorámica al Río de la Plata. Lujo y comodidad en el moderno Puerto Madero.", image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", allImages: ["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-      ];
-      
-      const processedMocks = mockProperties.map(p => ({...p, allImages: Array.isArray(p.allImages) ? p.allImages : (p.image ? [p.image] : []), currency: p.currency || 'ARS' }));
-      const processedStored = allProperties.map(p => ({...p, allImages: Array.isArray(p.allImages) ? p.allImages : (p.image ? [p.image] : []), currency: p.currency || 'ARS' }));
-
-      const combinedProperties = [...processedMocks, ...processedStored.filter(sp => !processedMocks.find(mp => mp.id === sp.id))];
-      
-      const foundProperty = combinedProperties.find(p => p.id.toString() === propertyId);
-      
-      if (foundProperty) {
-        setProperty(foundProperty);
-      } else {
+    const fetchProperty = async () => {
+      try {
+        const propertyData = await getPropertyById(propertyId);
+        setProperty(propertyData);
+      } catch (error) {
+        console.error('Error fetching property:', error);
         toast({
           title: "Propiedad no encontrada",
           description: "No pudimos encontrar los detalles para esta propiedad.",
@@ -48,19 +31,12 @@ const PropertyDetailPage = () => {
         });
         navigate('/');
       }
-      setLoading(false);
     };
 
-    fetchProperty();
-     const handlePropertiesChanged = () => {
-        fetchProperty();
-    };
-    window.addEventListener('propertiesChanged_rentadoor', handlePropertiesChanged);
-
-    return () => {
-        window.removeEventListener('propertiesChanged_rentadoor', handlePropertiesChanged);
-    };
-  }, [propertyId, navigate, toast]);
+    if (propertyId) {
+      fetchProperty();
+    }
+  }, [propertyId, getPropertyById, navigate, toast]);
 
   const handleContactOwner = () => {
     toast({
@@ -70,7 +46,7 @@ const PropertyDetailPage = () => {
   };
 
   const handleReserve = () => {
-    if (!currentUser) {
+    if (!user) {
       toast({
         title: "Inicia sesión para reservar",
         description: "Debes estar registrado y haber iniciado sesión para poder reservar una propiedad.",
@@ -78,7 +54,7 @@ const PropertyDetailPage = () => {
       });
       return;
     }
-    if (currentUser.identityStatus !== 'Verified') {
+    if (user.identityVerificationStatus !== 'verified') {
       toast({
         title: "Verificación Requerida",
         description: "Debes verificar tu identidad para poder reservar una propiedad.",
@@ -90,15 +66,23 @@ const PropertyDetailPage = () => {
     navigate(`/propiedad/${propertyId}/reservar`);
   };
 
+  const handleEditProperty = () => {
+    navigate(`/dashboard/propietario/editar/${propertyId}`);
+  };
+
+  const handleManageProperty = () => {
+    navigate('/dashboard/propietario');
+  };
+
   const nextImage = () => {
-    if (property && property.allImages && property.allImages.length > 0) {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % property.allImages.length);
+    if (property && property.all_images && property.all_images.length > 0) {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % property.all_images.length);
     }
   };
 
   const prevImage = () => {
-    if (property && property.allImages && property.allImages.length > 0) {
-      setCurrentImageIndex((prevIndex) => (prevIndex - 1 + property.allImages.length) % property.allImages.length);
+    if (property && property.all_images && property.all_images.length > 0) {
+      setCurrentImageIndex((prevIndex) => (prevIndex - 1 + property.all_images.length) % property.all_images.length);
     }
   };
 
@@ -119,13 +103,17 @@ const PropertyDetailPage = () => {
     );
   }
   
-  const imagesToShow = property.allImages && property.allImages.length > 0 
-    ? property.allImages 
+  // Normalizar las imágenes para mostrar
+  const imagesToShow = property.all_images && property.all_images.length > 0 
+    ? property.all_images 
     : (property.image ? [property.image] : ["https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]);
   
-  const displayPrice = property.monthlyRent !== undefined ? property.monthlyRent : property.price;
+  const displayPrice = property.monthly_rent || property.monthlyRent || property.price;
   const currencySymbol = property.currency === 'USD' ? 'U$S' : '$';
   const priceLabel = "/mes";
+
+  // Verificar si el usuario es el propietario
+  const isOwner = user && property.owner_id && user.id === property.owner_id;
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -192,7 +180,7 @@ const PropertyDetailPage = () => {
                   </div>
                   <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-lg">
                     <Home className="h-5 w-5 text-blue-600" />
-                    <span>{property.environments || property.bedrooms} Ambientes</span>
+                    <span>{property.environments} Ambientes</span>
                   </div>
                   {property.bathrooms !== undefined && (
                     <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-lg">
@@ -206,7 +194,7 @@ const PropertyDetailPage = () => {
                       <span>{property.garages} Cochera{property.garages !== 1 ? 's' : ''}</span>
                     </div>
                   )}
-                   {property.bedrooms !== undefined && property.environments === undefined && ( 
+                   {property.bedrooms !== undefined && ( 
                     <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-lg">
                       <BedDouble className="h-5 w-5 text-blue-600" />
                       <span>{property.bedrooms} Dormitorio{property.bedrooms !== 1 ? 's' : ''}</span>
@@ -218,26 +206,44 @@ const PropertyDetailPage = () => {
               <div className="md:col-span-1 space-y-6">
                 <Card className="bg-slate-50 shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-2xl text-slate-800">Alquiler</CardTitle>
+                    <CardTitle className="text-2xl text-slate-800">
+                      {isOwner ? 'Tu Propiedad' : 'Alquiler'}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-3xl font-bold text-blue-600 mb-1">
                       {currencySymbol} {displayPrice.toLocaleString('es-AR')} <span className="text-lg font-normal text-slate-600">{priceLabel}</span>
                     </p>
-                    {property.expensePrice > 0 && (
+                    {property.expense_price > 0 && (
                        <p className="text-md text-slate-500">
-                         + ${property.expensePrice.toLocaleString('es-AR')} de expensas (ARS)
+                         + ${property.expense_price.toLocaleString('es-AR')} de expensas (ARS)
                        </p>
                     )}
-                    <Button className="w-full mt-4 bg-slate-700 hover:bg-slate-600" onClick={handleContactOwner}>
-                      <MessageSquare className="mr-2 h-5 w-5" /> Contactar al Propietario
-                    </Button>
-                    <Button variant="outline" className="w-full mt-2 text-slate-700 hover:text-slate-900" onClick={() => toast({title: "🚧 Próximamente", description: "Podrás guardar esta propiedad en tus favoritos."})}>
-                       Guardar en Favoritos
-                    </Button>
-                    <Button className="w-full mt-2 bg-blue-600 hover:bg-blue-500" onClick={handleReserve}>
-                      <CalendarCheck className="mr-2 h-5 w-5" /> Reservar
-                    </Button>
+                    
+                    {isOwner ? (
+                      // Botones para propietario
+                      <div className="space-y-2 mt-4">
+                        <Button className="w-full bg-blue-600 hover:bg-blue-500" onClick={handleEditProperty}>
+                          <Edit className="mr-2 h-5 w-5" /> Editar Propiedad
+                        </Button>
+                        <Button variant="outline" className="w-full text-slate-700 hover:text-slate-900" onClick={handleManageProperty}>
+                          <Settings className="mr-2 h-5 w-5" /> Gestionar Propiedades
+                        </Button>
+                      </div>
+                    ) : (
+                      // Botones para visitantes
+                      <div className="space-y-2 mt-4">
+                        <Button className="w-full bg-slate-700 hover:bg-slate-600" onClick={handleContactOwner}>
+                          <MessageSquare className="mr-2 h-5 w-5" /> Contactar al Propietario
+                        </Button>
+                        <Button variant="outline" className="w-full text-slate-700 hover:text-slate-900" onClick={() => toast({title: "🚧 Próximamente", description: "Podrás guardar esta propiedad en tus favoritos."})}>
+                           Guardar en Favoritos
+                        </Button>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-500" onClick={handleReserve}>
+                          <CalendarCheck className="mr-2 h-5 w-5" /> Reservar
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 
@@ -246,13 +252,21 @@ const PropertyDetailPage = () => {
                         <CardTitle className="text-xl text-slate-800">Información Adicional</CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm text-slate-600 space-y-1">
-                        <p>ID Propiedad: {property.id}</p>
-                        <p>Dueño ID: {property.ownerId || "No especificado"}</p>
-                        <p>Rating: {property.rating} ⭐</p>
-                        <p>Estado: <span className={`font-semibold ${property.status === "Disponible" ? "text-green-600" : "text-red-600"}`}>{property.status}</span></p>
+                        <p>Estado: {property.status}</p>
+                        <p>Moneda: {property.currency}</p>
+                        {property.rating && <p>Calificación: {property.rating}/5</p>}
+                        <p>Publicado: {new Date(property.created_at).toLocaleDateString('es-AR')}</p>
+                        {isOwner && (
+                          <>
+                            <p>Tipo: {property.type || 'Departamento'}</p>
+                            <p>Ambientes: {property.environments}</p>
+                            {property.bathrooms !== undefined && <p>Baños: {property.bathrooms}</p>}
+                            {property.garages !== undefined && <p>Cocheras: {property.garages}</p>}
+                            {property.bedrooms !== undefined && <p>Dormitorios: {property.bedrooms}</p>}
+                          </>
+                        )}
                     </CardContent>
                 </Card>
-
               </div>
             </div>
           </CardContent>

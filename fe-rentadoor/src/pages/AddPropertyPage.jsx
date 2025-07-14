@@ -10,20 +10,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { UploadCloud, PlusCircle, Trash2, DollarSign, BedDouble, Bath, Car, Home } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthContext } from '@/contexts/AuthContext';
-
-const fileToDataUrl = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+import { useProperties } from '@/hooks/useProperties';
 
 const AddPropertyPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuthContext();
+  const { createProperty, uploadPropertyImages, loading } = useProperties();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -52,10 +45,10 @@ const AddPropertyPage = () => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    if (imageFiles.length + files.length > 5) {
+    if (imageFiles.length + files.length > 10) {
       toast({
         title: "Límite de imágenes",
-        description: "Puedes subir un máximo de 5 imágenes.",
+        description: "Puedes subir un máximo de 10 imágenes.",
         variant: "destructive",
       });
       return;
@@ -96,47 +89,54 @@ const AddPropertyPage = () => {
       return;
     }
 
-    const imageDataUrls = await Promise.all(
-      imageFiles.map(file => fileToDataUrl(file))
-    );
-
-    const newProperty = {
-      id: Date.now(), 
-      ownerId: user ? user.id : 'unknown_owner',
-      title,
-      description,
-      location,
-      price: parseFloat(monthlyRent), // Mantenemos price por compatibilidad, pero usaremos monthlyRent y currency
-      monthlyRent: parseFloat(monthlyRent),
-      currency,
-      expensePrice: expensePrice ? parseFloat(expensePrice) : 0,
-      environments: parseInt(environments),
-      bathrooms: parseInt(bathrooms),
-      garages: parseInt(garages),
-      guests: parseInt(guests),
-      bedrooms: parseInt(environments > 1 ? environments -1 : 1),
-      rating: (Math.random() * (5 - 3.5) + 3.5).toFixed(1),
-      image: imageDataUrls.length > 0 ? imageDataUrls[0] : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80',
-      allImages: imageDataUrls,
-      status: "Disponible",
-    };
-
     try {
-      const existingProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-      localStorage.setItem('properties_rentadoor', JSON.stringify([...existingProperties, newProperty]));
-      window.dispatchEvent(new Event('propertiesChanged_rentadoor'));
-      toast({
-        title: "¡Propiedad Agregada!",
-        description: `${title} ha sido agregada exitosamente.`,
-      });
-      navigate('/dashboard/propietario'); 
+      // Primero subir las imágenes
+      let imageUrls = [];
+      if (imageFiles.length > 0) {
+        const uploadResult = await uploadPropertyImages(imageFiles);
+        imageUrls = uploadResult.images || [];
+      }
+
+      // Crear la propiedad con los datos de la API
+      const propertyData = {
+        title,
+        description,
+        location,
+        monthlyRent: parseFloat(monthlyRent),
+        currency,
+        expensePrice: expensePrice ? parseFloat(expensePrice) : 0,
+        environments: parseInt(environments),
+        bathrooms: parseInt(bathrooms),
+        garages: parseInt(garages),
+        guests: parseInt(guests),
+        bedrooms: parseInt(environments > 1 ? environments - 1 : 1),
+        allImages: imageUrls,
+      };
+
+      await createProperty(propertyData);
+      
+      // Limpiar el formulario
+      setTitle('');
+      setDescription('');
+      setLocation('');
+      setMonthlyRent('');
+      setCurrency('ARS');
+      setExpensePrice('');
+      setEnvironments('');
+      setBathrooms('');
+      setGarages('');
+      setGuests('');
+      setImageFiles([]);
+      setImagePreviews([]);
+
+      navigate('/dashboard/propietario');
     } catch (error) {
+      console.error("Error creating property:", error);
       toast({
-        title: "Error al guardar",
-        description: "Hubo un problema al guardar la propiedad. Intenta de nuevo.",
+        title: "Error al crear la propiedad",
+        description: error.message || "Hubo un problema al crear la propiedad. Intenta de nuevo.",
         variant: "destructive",
       });
-      console.error("Error saving property:", error);
     }
   };
 
@@ -191,7 +191,6 @@ const AddPropertyPage = () => {
                     <SelectContent>
                       <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
                       <SelectItem value="USD">USD - Dólar Estadounidense</SelectItem>
-                      <SelectItem value="EUR">EUR - Euro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -252,30 +251,31 @@ const AddPropertyPage = () => {
                       </Button>
                     </div>
                   ))}
-                  {imagePreviews.length < 5 && (
-                    <Label
-                      htmlFor="image-upload"
-                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 transition-colors aspect-square"
-                    >
-                      <UploadCloud className="h-8 w-8 text-slate-400" />
-                      <span className="text-sm text-slate-600 mt-2">Agregar imagen</span>
-                    </Label>
+                  {imagePreviews.length < 10 && (
+                    <div className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center hover:border-slate-400 transition-colors">
+                      <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+                        <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                        <span className="text-sm text-slate-500">Agregar imagen</span>
+                      </label>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </div>
                   )}
                 </div>
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
+                <p className="text-sm text-slate-500">
+                  Puedes subir hasta 10 imágenes. La primera imagen será la principal.
+                </p>
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Agregar Propiedad
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creando propiedad...' : 'Crear Propiedad'}
               </Button>
             </CardFooter>
           </form>
