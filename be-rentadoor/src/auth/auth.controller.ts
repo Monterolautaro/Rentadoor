@@ -21,6 +21,36 @@ export class AuthController {
         };
     }
 
+    @Get('/test-set-cookie')
+    async testSetCookie(@Res() res: Response): Promise<any> {
+        console.log('🔧 [TEST-SET-COOKIE] Configuración:', {
+            NODE_ENV: process.env.NODE_ENV,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+        });
+
+        res.cookie('testCookie', 'test-value', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            maxAge: 3600000, // 1 hora
+            path: '/'
+        });
+
+        console.log('🔧 [TEST-SET-COOKIE] Headers de respuesta:', {
+            'set-cookie': res.getHeaders()['set-cookie']
+        });
+
+        return res.json({ 
+            message: 'Test cookie set',
+            config: {
+                NODE_ENV: process.env.NODE_ENV,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+            }
+        });
+    }
+
     @Get('/me')
     async getCurrentUser(@Req() req: Request): Promise<any> {
         try {
@@ -46,11 +76,23 @@ export class AuthController {
         try {
             const result = await this.authService.signUp(body);
 
+            console.log('🔧 [SIGNUP] Configuración de cookie:', {
+                NODE_ENV: process.env.NODE_ENV,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                hasToken: !!result.token
+            });
+
             res.cookie('authToken', result.token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 3600000 // 1 hora
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                maxAge: 3600000, // 1 hora
+                path: '/'
+            });
+
+            console.log('🔧 [SIGNUP] Cookie configurada, headers de respuesta:', {
+                'set-cookie': res.getHeaders()['set-cookie']
             });
 
             const { token, ...responseData } = result;
@@ -71,11 +113,23 @@ export class AuthController {
         try {
             const result = await this.authService.login(body);
 
+            console.log('🔧 [SIGNIN] Configuración de cookie:', {
+                NODE_ENV: process.env.NODE_ENV,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                hasToken: !!result.token
+            });
+
             res.cookie('authToken', result.token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 3600000 // 1 hora
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                maxAge: 3600000, // 1 hora
+                path: '/'
+            });
+
+            console.log('🔧 [SIGNIN] Cookie configurada, headers de respuesta:', {
+                'set-cookie': res.getHeaders()['set-cookie']
             });
 
             const { token, ...responseData } = result;
@@ -221,8 +275,9 @@ export class AuthController {
             res.cookie('authToken', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 3600000 // 1 hora
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                maxAge: 3600000, // 1 hora
+                path: '/'
             });
             
             return res.json({ message: 'Test token generated', token });

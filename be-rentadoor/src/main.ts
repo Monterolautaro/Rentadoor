@@ -4,7 +4,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import 'dotenv/config';
 
-const allowedOrigins = process.env.URL_FRONT?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = process.env.URL_FRONT?.split(',') || ['http://localhost:5173', 'http://localhost:3000', 'https://rentadoor.vercel.app/'];
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
