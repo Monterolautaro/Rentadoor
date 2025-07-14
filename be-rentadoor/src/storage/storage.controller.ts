@@ -31,7 +31,7 @@ interface RequestWithUser extends Request {
         id: string;
         email: string;
         verified: boolean;
-        role: string;
+        rol: string;
     };
 }
 
@@ -89,7 +89,8 @@ export class StorageController {
     }
 
     @Post('upload-property-images')
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, RolesGuard)
+    @RolesDecorator(Roles.ADMIN, Roles.USER)
     @UseInterceptors(FilesInterceptor('images', 10))
     async uploadPropertyImages(
         @UploadedFiles(new ParseFilePipe({
@@ -110,7 +111,7 @@ export class StorageController {
         if (files.length > 10) {
             throw new BadRequestException('Puedes subir un máximo de 10 imágenes');
         }
-
+        
         const userId = req.user.id;
         const uploadedImages: string[] = [];
 
@@ -132,8 +133,16 @@ export class StorageController {
         return { url: imageUrl };
     }
 
+    @Get('test-roles')
+    @RolesDecorator(Roles.USER)
+    @UseGuards(AuthGuard, RolesGuard)
+    async testRoles() {
+        return { message: 'Roles test successful' };
+    }
+
     @Delete('property-image/:imageName')
-    @UseGuards(AuthGuard)
+    @RolesDecorator(Roles.ADMIN, Roles.USER)
+    @UseGuards(AuthGuard, RolesGuard)
     async deletePropertyImage(
         @Param('imageName') imageName: string,
         @Req() req: RequestWithUser
@@ -144,22 +153,22 @@ export class StorageController {
     }
 
     @Get()
-    @UseGuards(AuthGuard, RolesGuard)
     @RolesDecorator(Roles.ADMIN)
+    @UseGuards(AuthGuard, RolesGuard)
     async getAllFiles() {
         return await this.storageService.getEncryptedFiles();
     }
 
     @Get(':userId')
-    @UseGuards(AuthGuard, RolesGuard)
     @RolesDecorator(Roles.ADMIN)
+    @UseGuards(AuthGuard, RolesGuard)
     async getUserFiles(@Param('userId') userId: string) {
         return await this.storageService.getEncryptedFiles(userId);
     }
 
     @Get('download/:fileId')
-    @UseGuards(AuthGuard, RolesGuard)
     @RolesDecorator(Roles.ADMIN)
+    @UseGuards(AuthGuard, RolesGuard)
     async downloadFile(@Param('fileId') fileId: string) {
         const { fileName, buffer } = await this.storageService.downloadAndDecryptFile(fileId);
 

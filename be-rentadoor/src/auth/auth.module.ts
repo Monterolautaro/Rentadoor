@@ -8,22 +8,16 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { UserModule } from "../user/user.module";
 import { EmailModule } from "../email/email.module";
 import { SupabaseModule } from "../supabase/supabase.module";
-import { StorageModule } from "../storage/storage.module";
 import { RolesGuard } from "./guards/roles.guard";
-import { JwtModule } from "@nestjs/jwt";
 
 @Module({
     imports: [
         UserModule,
         EmailModule,
-        SupabaseModule,
-        JwtModule.register({
-            secret: process.env.JWT_SECRET || 'fallback-secret',
-            signOptions: { expiresIn: '35m' },
-        }),
+        SupabaseModule
     ],
     controllers: [AuthController],
     providers: [AuthService, AuthRepository, UserRepository, EmailService, SupabaseService, RolesGuard],
-    exports: [AuthRepository, AuthService, JwtModule]
+    exports: [AuthRepository, AuthService]
 })
 export class AuthModule {}

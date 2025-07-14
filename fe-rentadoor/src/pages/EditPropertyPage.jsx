@@ -9,23 +9,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import { UploadCloud, Save, Trash2, DollarSign, BedDouble, Bath, Car, Home, ChevronLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const fileToDataUrl = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useProperties } from '@/hooks/useProperties';
 
 const EditPropertyPage = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user } = useAuthContext();
+  const { getPropertyById, updateProperty, uploadPropertyImages, loading } = useProperties();
   const [property, setProperty] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -42,10 +35,7 @@ const EditPropertyPage = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser_rentadoor');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    } else {
+    if (!user) {
       toast({
         title: "Acceso Denegado",
         description: "Debes iniciar sesión para editar una propiedad.",
@@ -55,45 +45,51 @@ const EditPropertyPage = () => {
       return;
     }
 
-    const allProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-    const foundProperty = allProperties.find(p => p.id.toString() === propertyId);
+    const fetchProperty = async () => {
+      try {
+        const propertyData = await getPropertyById(propertyId);
+        setProperty(propertyData);
+        
+        // Llenar el formulario con los datos de la propiedad
+        setTitle(propertyData.title);
+        setDescription(propertyData.description || '');
+        setLocation(propertyData.location);
+        setMonthlyRent(propertyData.monthly_rent?.toString() || '');
+        setCurrency(propertyData.currency || 'ARS'); 
+        setExpensePrice(propertyData.expense_price?.toString() || '');
+        setEnvironments(propertyData.environments?.toString() || '');
+        setBathrooms(propertyData.bathrooms?.toString() || '');
+        setGarages(propertyData.garages?.toString() || '');
+        setGuests(propertyData.guests?.toString() || '');
+        
+        // Configurar las imágenes existentes
+        const currentImages = Array.isArray(propertyData.all_images) ? propertyData.all_images : (propertyData.image ? [propertyData.image] : []);
+        setExistingImageUrls(currentImages);
+        setImagePreviews(currentImages);
+      } catch (error) {
+        console.error('Error fetching property:', error);
+        toast({
+          title: "Propiedad no encontrada",
+          description: "No se pudo cargar la propiedad para editar.",
+          variant: "destructive",
+        });
+        navigate('/dashboard/propietario');
+      }
+    };
 
-    if (foundProperty) {
-      setProperty(foundProperty);
-      setTitle(foundProperty.title);
-      setDescription(foundProperty.description);
-      setLocation(foundProperty.location);
-      setMonthlyRent(foundProperty.monthlyRent?.toString() || foundProperty.price?.toString() || '');
-      setCurrency(foundProperty.currency || 'ARS'); 
-      setExpensePrice(foundProperty.expensePrice?.toString() || '');
-      setEnvironments(foundProperty.environments?.toString() || '');
-      setBathrooms(foundProperty.bathrooms?.toString() || '');
-      setGarages(foundProperty.garages?.toString() || '');
-      setGuests(foundProperty.guests?.toString() || '');
-      
-      const currentImages = Array.isArray(foundProperty.allImages) ? foundProperty.allImages : (foundProperty.image ? [foundProperty.image] : []);
-      setExistingImageUrls(currentImages);
-      setImagePreviews(currentImages);
-
-    } else {
-      toast({
-        title: "Propiedad no encontrada",
-        description: "No se pudo cargar la propiedad para editar.",
-        variant: "destructive",
-      });
-      navigate('/dashboard/propietario');
+    if (propertyId) {
+      fetchProperty();
     }
-    setLoading(false);
-  }, [propertyId, navigate, toast]);
+  }, [propertyId, user, getPropertyById, navigate, toast]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     const totalImages = existingImageUrls.length + imageFiles.length + files.length;
 
-    if (totalImages > 5) {
+    if (totalImages > 10) {
       toast({
         title: "Límite de imágenes",
-        description: `Puedes tener un máximo de 5 imágenes. Ya tienes ${existingImageUrls.length + imageFiles.length}.`,
+        description: `Puedes tener un máximo de 10 imágenes. Ya tienes ${existingImageUrls.length + imageFiles.length}.`,
         variant: "destructive",
       });
       return;
@@ -139,52 +135,51 @@ const EditPropertyPage = () => {
       return;
     }
 
-    const newImageDataUrls = await Promise.all(
-      imageFiles.map(file => fileToDataUrl(file))
-    );
-    const allFinalImageUrls = [...existingImageUrls, ...newImageDataUrls];
-
-    const updatedProperty = {
-      ...property,
-      title,
-      description,
-      location,
-      price: parseFloat(monthlyRent), // Sigue siendo útil tener un 'price' genérico, pero monthlyRent/currency son los primarios
-      monthlyRent: parseFloat(monthlyRent),
-      currency,
-      expensePrice: expensePrice ? parseFloat(expensePrice) : 0,
-      environments: parseInt(environments),
-      bathrooms: parseInt(bathrooms),
-      garages: parseInt(garages),
-      guests: parseInt(guests),
-      bedrooms: parseInt(environments > 1 ? environments -1 : 1),
-      image: allFinalImageUrls.length > 0 ? allFinalImageUrls[0] : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80',
-      allImages: allFinalImageUrls,
-    };
-
     try {
-      const existingProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-      const updatedProperties = existingProperties.map(p => 
-        p.id.toString() === propertyId ? updatedProperty : p
-      );
-      localStorage.setItem('properties_rentadoor', JSON.stringify(updatedProperties));
-      window.dispatchEvent(new Event('propertiesChanged_rentadoor'));
+      // Subir nuevas imágenes si las hay
+      let newImageUrls = [];
+      if (imageFiles.length > 0) {
+        const uploadResult = await uploadPropertyImages(imageFiles);
+        newImageUrls = uploadResult.images || [];
+      }
+
+      // Combinar imágenes existentes con nuevas
+      const allFinalImageUrls = [...existingImageUrls, ...newImageUrls];
+
+      // Preparar datos para actualizar
+      const updateData = {
+        title,
+        description,
+        location,
+        monthlyRent: parseFloat(monthlyRent),
+        currency,
+        expensePrice: expensePrice ? parseFloat(expensePrice) : 0,
+        environments: parseInt(environments),
+        bathrooms: parseInt(bathrooms),
+        garages: parseInt(garages),
+        guests: parseInt(guests),
+        bedrooms: parseInt(environments > 1 ? environments - 1 : 1),
+        allImages: allFinalImageUrls,
+      };
+
+      await updateProperty(propertyId, updateData);
+      
       toast({
         title: "¡Propiedad Actualizada!",
         description: `${title} ha sido actualizada exitosamente.`,
       });
       navigate('/dashboard/propietario'); 
     } catch (error) {
+      console.error("Error updating property:", error);
       toast({
         title: "Error al actualizar",
-        description: "Hubo un problema al actualizar la propiedad. Intenta de nuevo.",
+        description: error.message || "Hubo un problema al actualizar la propiedad. Intenta de nuevo.",
         variant: "destructive",
       });
-      console.error("Error updating property:", error);
     }
   };
 
-  if (loading || !currentUser) {
+  if (loading || !user) {
     return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-slate-700"></div></div>;
   }
 
@@ -250,44 +245,44 @@ const EditPropertyPage = () => {
                   <Input id="expensePrice" type="number" value={expensePrice} onChange={(e) => setExpensePrice(e.target.value)} placeholder="Ej: 15000" className="pl-8" />
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="environments" className="text-slate-700">Ambientes</Label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="environments" type="number" value={environments} onChange={(e) => setEnvironments(e.target.value)} placeholder="Ej: 3" className="pl-8" />
-                  </div>
+                  <Input id="environments" type="number" value={environments} onChange={(e) => setEnvironments(e.target.value)} placeholder="Ej: 3" min="1" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bathrooms" className="text-slate-700">Baños</Label>
                   <div className="relative">
                     <Bath className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="bathrooms" type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} placeholder="Ej: 2" className="pl-8" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="garages" className="text-slate-700">Cocheras</Label>
-                  <div className="relative">
-                    <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="garages" type="number" value={garages} onChange={(e) => setGarages(e.target.value)} placeholder="Ej: 1" className="pl-8" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="guests" className="text-slate-700">Máx. Huéspedes</Label>
-                   <div className="relative">
-                    <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="guests" type="number" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="Ej: 4" className="pl-8"/>
+                    <Input id="bathrooms" type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} placeholder="Ej: 2" min="1" className="pl-8" />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-slate-700">Imágenes de la Propiedad (Máx. 5)</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
-                  {imagePreviews.map((src, index) => (
-                    <div key={src + index} className="relative group aspect-square">
-                      <img-replace src={src} alt={`Vista previa ${index + 1}`} className="w-full h-full object-cover rounded-md border" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="garages" className="text-slate-700">Cocheras</Label>
+                  <div className="relative">
+                    <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input id="garages" type="number" value={garages} onChange={(e) => setGarages(e.target.value)} placeholder="Ej: 1" min="0" className="pl-8" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guests" className="text-slate-700">Huéspedes Máximos</Label>
+                  <div className="relative">
+                    <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input id="guests" type="number" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="Ej: 4" min="1" className="pl-8" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-slate-700">Imágenes de la Propiedad</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group aspect-square">
+                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg border" />
                       <Button
                         type="button"
                         variant="destructive"
@@ -299,27 +294,31 @@ const EditPropertyPage = () => {
                       </Button>
                     </div>
                   ))}
-                  {(existingImageUrls.length + imageFiles.length) < 5 && (
-                    <Label
-                      htmlFor="image-upload"
-                      className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-md cursor-pointer hover:border-slate-400 transition-colors"
-                    >
-                      <UploadCloud className="h-8 w-8 text-slate-400 mb-1" />
-                      <span className="text-xs text-slate-500">Subir Imagen</span>
-                    </Label>
+                  {imagePreviews.length < 10 && (
+                    <div className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center hover:border-slate-400 transition-colors">
+                      <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+                        <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                        <span className="text-sm text-slate-500">Agregar imagen</span>
+                      </label>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </div>
                   )}
                 </div>
-                <Input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                {(existingImageUrls.length + imageFiles.length) > 0 && <p className="text-xs text-slate-500">{(existingImageUrls.length + imageFiles.length)} de 5 imágenes seleccionadas.</p>}
+                <p className="text-sm text-slate-500">
+                  Puedes tener hasta 10 imágenes. La primera imagen será la principal.
+                </p>
               </div>
-
             </CardContent>
-            <CardFooter className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/dashboard/propietario')}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-slate-800 hover:bg-slate-700">
-                <Save className="mr-2 h-4 w-4" /> Guardar Cambios
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Actualizando propiedad...' : 'Actualizar Propiedad'}
               </Button>
             </CardFooter>
           </form>

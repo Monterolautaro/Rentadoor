@@ -39,10 +39,11 @@ export class AuthService {
         const payload = {
           id: result.id,
           email,
-          role: Roles.USER,
+          role: result.rol,
         };
-
+        
         const token = this.jwtService.sign(payload);
+    
 
         return {
             success: 200,
@@ -84,7 +85,7 @@ export class AuthService {
         const payload = {
             id: createdUser.id,
             email,
-            role: Roles.USER,
+            role: createdUser.rol,
         };
 
         const token = this.jwtService.sign(payload);

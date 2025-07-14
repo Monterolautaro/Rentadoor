@@ -19,22 +19,31 @@ import { Roles } from '../../common/enums/roles.enum';
         context.getHandler(),
         context.getClass(),
       ]);
-  
+
       const request = context.switchToHttp().getRequest();
-  
+
       const user = request.user;
-  
-      const hasRole = () =>
-        requiredRoles.some((role) => user?.rol === role);
-  
-      const valid = user && user.rol && hasRole();
-  
-      if (!valid) {
+
+      // Verificar que requiredRoles sea un array válido
+      if (!requiredRoles || !Array.isArray(requiredRoles) || requiredRoles.length === 0) {
+        throw new ForbiddenException('No roles required for this endpoint');
+      }
+
+      // Verificar que el usuario tenga un rol
+      if (!user || !user.rol) {
+        throw new ForbiddenException('User role not found');
+      }
+
+      const hasRole = requiredRoles.some((role) => {
+        return user.rol === role;
+      });
+
+      if (!hasRole) {
         throw new ForbiddenException(
           "You don't have permission to access this resource",
         );
       }
-  
+
       return true;
     }
   }

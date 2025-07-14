@@ -15,9 +15,9 @@ export class AuthController {
     @Get('/test-cookies')
     async testCookies(@Req() req: Request): Promise<any> {
         return {
-            message: 'Cookies recibidas',
-            cookies: req.cookies,
-            hasAuthToken: !!req.cookies.authToken
+            allCookies: req.cookies,
+            authToken: req.cookies?.authToken ? 'present' : 'missing',
+            refreshToken: req.cookies?.refreshToken ? 'present' : 'missing'
         };
     }
 
@@ -92,26 +92,10 @@ export class AuthController {
     }
 
     @Post('/logout')
-    async logout(@Res() res: Response): Promise<any> {
-        try {
-            const result = await this.authService.logout();
-
-            res.clearCookie('authToken', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
-            });
-
-            return res.json(result);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException(
-                error.message || 'Internal server error',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
+    async logout(@Res({ passthrough: true }) res: Response): Promise<any> {
+        res.clearCookie('authToken');
+        res.clearCookie('refreshToken');
+        return { message: 'Logout successful' };
     }
 
     @Post('/forgot-password')
@@ -216,6 +200,33 @@ export class AuthController {
             if (error instanceof HttpException) {
                 throw error;
             }
+            throw new HttpException(
+                error.message || 'Internal server error',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Post('/test-token')
+    async testToken(@Body() body: { email: string, id: number, role: string }, @Res() res: Response): Promise<any> {
+        try {
+            const payload = {
+                id: body.id,
+                email: body.email,
+                role: body.role,
+            };
+            
+            const token = this.authService['jwtService'].sign(payload);
+            
+            res.cookie('authToken', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 3600000 // 1 hora
+            });
+            
+            return res.json({ message: 'Test token generated', token });
+        } catch (error) {
             throw new HttpException(
                 error.message || 'Internal server error',
                 HttpStatus.INTERNAL_SERVER_ERROR

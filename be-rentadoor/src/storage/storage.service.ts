@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { EncryptionService } from '../encryption/encryption.service';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageRepository } from './storage.repository';
 import { AuthRepository } from '../auth/auth.repository';
+import { EncryptionService } from '../encryption/encryption.service';
 
 @Injectable()
 export class StorageService {
@@ -14,17 +14,16 @@ export class StorageService {
   ) {}
 
   async uploadEncryptedFile(buffer: Buffer, userId: string, fileName: string) {
-    // Encrypt
+ 
     const encrypted = this.encryptionService.encryptBuffer(buffer);
 
-    // Hash
+   
     const sha256 = createHash('sha256').update(buffer).digest('hex');
 
     const storagePath = `${userId}/${uuidv4()}_${fileName}.enc`;
 
     await this.storageRepository.uploadToSupabase(storagePath, encrypted.cipherText);
 
-    // Convertir buffers a base64 para almacenamiento en DB
     const metadata = {
       user_id: userId,
       file_name: fileName,
@@ -44,13 +43,13 @@ export class StorageService {
   async getEncryptedFiles(userId?: string) {
     const files = await this.storageRepository.fetchFiles(userId);
     
-    // Agrupar archivos por usuario y obtener información del usuario
+  
     const filesByUser = {};
     
     for (const file of files) {
       const userId = file.user_id;
       if (!filesByUser[userId]) {
-        // Obtener información del usuario
+      
         const user = await this.authRepository.getUserById(parseInt(userId));
         filesByUser[userId] = {
           userId,
