@@ -5,13 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle, Eye } from 'lucide-react';
+import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle, Eye, TrendingUp, Settings, FileText, BarChart3 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
+import Sidebar from '@/components/Sidebar';
+import DevelopmentCard from '@/components/DevelopmentCard';
 
 const OwnerDashboardPage = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedSection, setSelectedSection] = useState('overview');
   const { toast } = useToast();
   const { user } = useAuthContext();
   const navigate = useNavigate();
@@ -74,6 +78,360 @@ const OwnerDashboardPage = () => {
     navigate(`/propiedad/${propertyId}`);
   };
 
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Mis Propiedades
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {properties.length}
+              </p>
+              <p className="text-sm text-slate-600">
+                Propiedades registradas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Reservas Activas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para reservas */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Reservas confirmadas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Ingresos Mensuales
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-green-600">
+                {/* TODO: Implementar endpoint para ingresos */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Este mes
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Inquilinos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para inquilinos */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Inquilinos activos
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-slate-800">Mis Propiedades</h2>
+            <Button onClick={handleAddProperty}>
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Propiedad
+            </Button>
+          </div>
+          
+          {properties.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                    No tienes propiedades aún
+                  </h3>
+                  <p className="text-slate-600 mb-4">
+                    Comienza agregando tu primera propiedad para empezar a generar ingresos.
+                  </p>
+                  <Button onClick={handleAddProperty}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Primera Propiedad
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {properties.slice(0, 3).map((property) => (
+                <Card key={property.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-800 mb-1">
+                          {property.title}
+                        </h3>
+                        <p className="text-sm text-slate-600 mb-2">
+                          {property.address}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-slate-600">
+                            ${property.monthlyRent}/mes
+                          </span>
+                          {getStatusBadge(property.status || 'Disponible')}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewProperty(property.id)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Detalles
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {properties.length > 3 && (
+                <div className="text-center">
+                  <Button variant="outline" onClick={() => setSelectedSection('properties')}>
+                    Ver todas las propiedades ({properties.length})
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-slate-800">Actividad Reciente</h2>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm">Nueva reserva confirmada</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 2 horas</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm">Pago recibido</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 1 día</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span className="text-sm">Nueva solicitud de reserva</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 2 días</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderProperties = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Mis Propiedades</h2>
+          <p className="text-slate-600">Gestiona todas tus propiedades</p>
+        </div>
+        <Button onClick={handleAddProperty}>
+          <Plus className="w-4 h-4 mr-2" />
+          Agregar Propiedad
+        </Button>
+      </div>
+
+      {properties.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                No tienes propiedades aún
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Comienza agregando tu primera propiedad para empezar a generar ingresos.
+              </p>
+              <Button onClick={handleAddProperty}>
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Primera Propiedad
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {properties.map((property) => (
+            <Card key={property.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-1">
+                      {property.title}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {property.address}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-green-600">
+                      ${property.price}/noche
+                    </span>
+                    {getStatusBadge(property.status || 'Disponible')}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleViewProperty(property.id)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate(`/dashboard/propietario/editar/${property.id}`)}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderReservations = () => (
+    <DevelopmentCard
+      title="Mis Reservas"
+      description="Panel para gestionar las reservas de tus propiedades."
+      icon={Calendar}
+      estimatedTime="En desarrollo"
+      features={[
+        "Lista de reservas",
+        "Confirmar reservas",
+        "Historial de reservas"
+      ]}
+      showProgress={true}
+      progress={20}
+    />
+  );
+
+  const renderIncome = () => (
+    <DevelopmentCard
+      title="Análisis de Ingresos"
+      description="Herramientas para analizar tus ingresos."
+      icon={DollarSign}
+      estimatedTime="En desarrollo"
+      features={[
+        "Dashboard de ingresos",
+        "Reportes mensuales",
+        "Exportación de datos"
+      ]}
+      showProgress={true}
+      progress={15}
+    />
+  );
+
+  const renderTenants = () => (
+    <DevelopmentCard
+      title="Gestión de Inquilinos"
+      description="Panel para gestionar la relación con tus inquilinos."
+      icon={Users}
+      estimatedTime="En desarrollo"
+      features={[
+        "Lista de inquilinos",
+        "Sistema de mensajería",
+        "Calificaciones"
+      ]}
+      showProgress={true}
+      progress={10}
+    />
+  );
+
+  const renderSettings = () => (
+    <DevelopmentCard
+      title="Configuración de Cuenta"
+      description="Configuración de tu cuenta y preferencias."
+      icon={Settings}
+      estimatedTime="En desarrollo"
+      features={[
+        "Configuración de perfil",
+        "Preferencias de notificaciones",
+        "Configuración de seguridad"
+      ]}
+      showProgress={true}
+      progress={30}
+    />
+  );
+
+  const renderContent = () => {
+    switch (selectedSection) {
+      case 'overview':
+        return renderOverview();
+      case 'properties':
+        return renderProperties();
+      case 'reservations':
+        return renderReservations();
+      case 'income':
+        return renderIncome();
+      case 'tenants':
+        return renderTenants();
+      case 'settings':
+        return renderSettings();
+      default:
+        return renderOverview();
+    }
+  };
+
   if (loading || propertiesLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -83,243 +441,25 @@ const OwnerDashboardPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            Panel de Propietario
-          </h1>
-          <p className="text-slate-600">
-            Gestiona tus propiedades y reservas
-          </p>
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        userRole="owner"
+        onSectionChange={setSelectedSection}
+      />
+      
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {renderContent()}
+          </motion.div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Mis Propiedades
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-800">
-                  {properties.length}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Propiedades registradas
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Reservas Activas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-800">
-                  {reservations.filter(r => r.status === 'confirmed').length}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Reservas confirmadas
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Ingresos Mensuales
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-green-600">
-                  ${reservations
-                    .filter(r => r.status === 'confirmed')
-                    .reduce((sum, r) => sum + (r.totalPrice || 0), 0)
-                    .toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Este mes
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Inquilinos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-800">
-                  {new Set(reservations
-                    .filter(r => r.status === 'confirmed')
-                    .map(r => r.userId)).size}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Inquilinos activos
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-800">Mis Propiedades</h2>
-              <Button onClick={handleAddProperty}>
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Propiedad
-              </Button>
-            </div>
-            
-            {properties.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                      No tienes propiedades aún
-                    </h3>
-                    <p className="text-slate-600 mb-4">
-                      Comienza agregando tu primera propiedad
-                    </p>
-                    <Button onClick={handleAddProperty}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agregar Propiedad
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {properties.map((property) => (
-                  <Card key={property.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{property.title}</CardTitle>
-                          <CardDescription>
-                            <div className="flex items-center gap-2 text-sm mt-1">
-                              <Home className="h-4 w-4" />
-                              {property.location}
-                            </div>
-                          </CardDescription>
-                        </div>
-                        {getStatusBadge(property.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Precio:</span>
-                            <span className="font-semibold text-green-600">
-                              ${property.monthly_rent || property.monthlyRent}/mes
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Tipo:</span>
-                            <span>{property.type || 'Departamento'}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Ambientes:</span>
-                            <span>{property.environments || property.bedrooms || 1}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleViewProperty(property.id)}
-                            className="flex items-center gap-2"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Ver detalles
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">Reservas Recientes</h2>
-            
-            {reservations.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                      No hay reservas aún
-                    </h3>
-                    <p className="text-slate-600">
-                      Las reservas aparecerán aquí cuando los usuarios reserven tus propiedades
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {reservations.map((reservation) => (
-                  <Card key={reservation.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{reservation.propertyTitle}</CardTitle>
-                          <CardDescription>
-                            <div className="flex items-center gap-2 text-sm mt-1">
-                              <Users className="h-4 w-4" />
-                              {reservation.userName}
-                            </div>
-                          </CardDescription>
-                        </div>
-                        {getStatusBadge(reservation.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Fecha:</span>
-                          <span>{reservation.date}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Total:</span>
-                          <span className="font-semibold text-green-600">
-                            ${reservation.totalPrice}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

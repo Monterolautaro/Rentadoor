@@ -5,33 +5,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
-import { Shield, Users, FileText, CheckCircle, XCircle, Clock, Eye, Check, X } from 'lucide-react';
+import { Shield, Users, FileText, CheckCircle, XCircle, Clock, Eye, Check, X, BarChart3, UserCheck, UserX, Ban, Trash2, AlertTriangle, TrendingUp, DollarSign, Building, Calendar } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import Sidebar from '@/components/Sidebar';
+import DevelopmentCard from '@/components/DevelopmentCard';
 import axios from 'axios';
 
 const AdminDashboardPage = () => {
   const [verifications, setVerifications] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedSection, setSelectedSection] = useState('overview');
   const { toast } = useToast();
   const { user } = useAuthContext();
 
   const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
   useEffect(() => {
-    const fetchVerifications = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/storage`, {
+        setLoading(true);
+        
+        // Cargar verificaciones
+        const verificationsResponse = await axios.get(`${API_URL}/storage`, {
           withCredentials: true
         });
-        setVerifications(response.data);
+        setVerifications(verificationsResponse.data);
+        
+        // Cargar propiedades
+        const propertiesResponse = await axios.get(`${API_URL}/properties/admin/all`, {
+          withCredentials: true
+        });
+        setProperties(propertiesResponse.data);
+        
       } catch (error) {
-        console.error('Error fetching verifications:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'No se pudieron cargar las verificaciones.',
+          description: 'No se pudieron cargar los datos.',
           variant: 'destructive',
         });
       } finally {
@@ -40,7 +55,7 @@ const AdminDashboardPage = () => {
     };
 
     if (user) {
-      fetchVerifications();
+      fetchData();
     }
   }, [user, API_URL, toast]);
 
@@ -148,6 +163,312 @@ const AdminDashboardPage = () => {
     );
   };
 
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Total Usuarios
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para contar usuarios */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Usuarios registrados
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Propiedades
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {properties.length}
+              </p>
+              <p className="text-sm text-slate-600">
+                Propiedades activas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Reservas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para contar reservas */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Reservas totales
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Verificaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {verifications.filter(v => v.status === 'pending').length}
+              </p>
+              <p className="text-sm text-slate-600">
+                Pendientes
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderUsers = () => (
+    <DevelopmentCard
+      title="Gestión de Usuarios"
+      description="Panel para administrar usuarios del sistema."
+      icon={Users}
+      estimatedTime="En desarrollo"
+      features={[
+        "Lista de usuarios",
+        "Suspender usuarios",
+        "Banear usuarios",
+        "Eliminar usuarios"
+      ]}
+      showProgress={true}
+      progress={25}
+    />
+  );
+
+  const renderProperties = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Gestión de Propiedades</h2>
+          <p className="text-slate-600">Administra todas las propiedades del sistema</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Todas las Propiedades</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+            </div>
+          ) : properties.length === 0 ? (
+            <div className="text-center py-8">
+              <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                No hay propiedades registradas
+              </h3>
+              <p className="text-slate-600">
+                No se han encontrado propiedades en el sistema.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {properties.map((property) => (
+                <div key={property.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-slate-800">
+                        {property.title}
+                      </h4>
+                      <p className="text-sm text-slate-600">
+                        {property.address}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Propietario: {property.ownerId}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        ${property.monthlyRent}/mes
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver Detalles
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderVerifications = () => {
+    console.log('Renderizando verificaciones:', { verifications, loading, selectedSection });
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Verificaciones de Identidad</h2>
+            <p className="text-slate-600">Gestiona las verificaciones pendientes de los usuarios</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Verificaciones Pendientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+              </div>
+            ) : !verifications || verifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                  No hay verificaciones pendientes
+                </h3>
+                <p className="text-slate-600">
+                  Todos los usuarios han sido verificados o no hay solicitudes pendientes.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {verifications.map((verification, index) => {
+                  console.log('Verificación:', verification);
+                  return (
+                    <div key={verification.userId || index} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          {verification.user ? (
+                            <>
+                              <h4 className="font-semibold text-slate-800">
+                                {verification.user.name}
+                              </h4>
+                              <p className="text-sm text-slate-600">
+                                {verification.user.email}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {verification.files?.length || 0} documentos subidos
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="font-semibold text-slate-800">
+                                Usuario #{verification.userId}
+                              </h4>
+                              <p className="text-sm text-slate-600">
+                                Información no disponible
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(verification.status)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {verification.files && verification.files.map((file, fileIndex) => (
+                          <Button
+                            key={file.id || fileIndex}
+                            size="sm"
+                            onClick={() => handleViewImage(file.id)}
+                            variant="outline"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver {file.file_name?.startsWith('selfie_') ? 'Selfie' : 'DNI'}
+                          </Button>
+                        ))}
+                        
+                        {verification.status === 'pending' && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprove(verification.userId)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              Aprobar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleReject(verification.userId)}
+                              variant="destructive"
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Rechazar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    console.log('Renderizando contenido para sección:', selectedSection);
+    
+    switch (selectedSection) {
+      case 'overview':
+        return renderOverview();
+      case 'users':
+        return renderUsers();
+      case 'properties':
+        return renderProperties();
+      case 'verifications':
+        return renderVerifications();
+      default:
+        return renderOverview();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -157,209 +478,48 @@ const AdminDashboardPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            Panel de Administrador
-          </h1>
-          <p className="text-slate-600">
-            Gestiona las verificaciones de identidad de los usuarios
-          </p>
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        userRole="admin"
+        onSectionChange={setSelectedSection}
+      />
+      
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {renderContent()}
+          </motion.div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Verificaciones Pendientes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-blue-600">
-                  {verifications.filter(v => v.status === 'pending').length}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Usuarios esperando verificación
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Archivos Subidos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-800">
-                  {verifications.reduce((total, v) => total + v.files.length, 0)}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Documentos en el sistema
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Estado del Sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-green-600">
-                  Activo
-                </p>
-                <p className="text-sm text-slate-600">
-                  Sistema funcionando
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Verificaciones de Identidad</CardTitle>
-            <CardDescription>
-              Revisa y aprueba las verificaciones de identidad de los usuarios
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {verifications.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                  No hay verificaciones pendientes
-                </h3>
-                <p className="text-slate-600">
-                  Los usuarios aparecerán aquí cuando suban sus documentos de identidad
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {verifications.map((verification) => (
-                  <Card key={verification.userId} className="border-l-4 border-l-blue-500">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {verification.user?.name || `Usuario ID: ${verification.userId}`}
-                          </CardTitle>
-                          <CardDescription>
-                            {verification.user?.email && (
-                              <div className="text-sm text-slate-600 mb-1">
-                                {verification.user.email}
-                              </div>
-                            )}
-                            {verification.files.length} documento{verification.files.length !== 1 ? 's' : ''} subido{verification.files.length !== 1 ? 's' : ''}
-                          </CardDescription>
-                        </div>
-                        {getStatusBadge(verification.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {verification.files.map((file) => (
-                            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-5 w-5 text-slate-400" />
-                                <div>
-                                  <p className="text-sm font-medium">{file.file_name}</p>
-                                  <p className="text-xs text-slate-500">
-                                    {new Date(file.created_at).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewImage(file.id)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                        {verification.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleApprove(verification.userId)}
-                              className="bg-green-600 hover:bg-green-500"
-                            >
-                              <Check className="h-4 w-4 mr-2" />
-                              Aprobar
-                            </Button>
-                            <Button
-                              onClick={() => handleReject(verification.userId)}
-                              variant="destructive"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Rechazar
-                            </Button>
-                          </div>
-                        )}
-                        {verification.status === 'verified' && (
-                          <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="text-sm">Verificación aprobada</span>
-                          </div>
-                        )}
-                        {verification.status === 'rejected' && (
-                          <div className="flex items-center gap-2 text-red-600">
-                            <XCircle className="h-4 w-4" />
-                            <span className="text-sm">Verificación rechazada</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Modal para ver imágenes */}
-        {showImageModal && selectedImage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-4 max-w-2xl max-h-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Vista previa del documento</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowImageModal(false);
-                    setSelectedImage(null);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <img
-                src={selectedImage}
-                alt="Documento"
-                className="max-w-full max-h-96 object-contain"
-              />
+      {/* Modal para ver imágenes */}
+      {showImageModal && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Documento de Identidad</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowImageModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
+            <img 
+              src={selectedImage} 
+              alt="Documento de identidad" 
+              className="w-full h-auto rounded"
+            />
           </div>
-        )}
-      </motion.div>
+        </div>
+      )}
     </div>
   );
 };

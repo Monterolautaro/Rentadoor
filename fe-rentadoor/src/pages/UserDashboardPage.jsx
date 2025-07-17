@@ -5,28 +5,37 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Calendar, MapPin, DollarSign, Clock, User, Shield, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Home, Calendar, Heart, User, Settings, Search, MapPin, Star, Clock, CheckCircle, AlertCircle, TrendingUp, FileText, BarChart3 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import Sidebar from '@/components/Sidebar';
+import DevelopmentCard from '@/components/DevelopmentCard';
 
 const UserDashboardPage = () => {
-  const [reservations, setReservations] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [recentSearches, setRecentSearches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedSection, setSelectedSection] = useState('overview');
   const { toast } = useToast();
   const { user } = useAuthContext();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Por ahora, como no existe el endpoint de reservas, usamos datos locales
-    const fetchReservations = async () => {
+    const fetchData = async () => {
       try {
-        // Simular carga de datos
+        setLoading(true);
+        
+        // TODO: Implementar endpoints reales para favoritos y búsquedas
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setReservations([]);
+        
+        // Por ahora, datos vacíos hasta implementar endpoints
+        setFavorites([]);
+        setRecentSearches([]);
       } catch (error) {
-        console.error('Error fetching reservations:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'No se pudieron cargar las reservas.',
+          description: 'No se pudieron cargar los datos.',
           variant: 'destructive',
         });
       } finally {
@@ -35,39 +44,355 @@ const UserDashboardPage = () => {
     };
 
     if (user) {
-      fetchReservations();
+      fetchData();
     }
   }, [user, toast]);
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      confirmed: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle },
-      completed: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
-    };
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Heart className="h-5 w-5" />
+              Favoritos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {favorites.length}
+              </p>
+              <p className="text-sm text-slate-600">
+                Propiedades guardadas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-    const config = statusConfig[status] || statusConfig.pending;
-    const Icon = config.icon;
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Mis Reservas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para mis reservas */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Reservas activas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-    return (
-      <Badge className={config.color}>
-        <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Calificaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {/* TODO: Implementar endpoint para calificaciones */}
+                -
+              </p>
+              <p className="text-sm text-slate-600">
+                Promedio recibido
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-  const handleVerifyIdentity = () => {
-    navigate('/dashboard/verificar-identidad');
-  };
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Búsquedas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-slate-800">
+                {recentSearches.length}
+              </p>
+              <p className="text-sm text-slate-600">
+                Búsquedas recientes
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-  const handleVerifyEmail = () => {
-    navigate('/verify-email');
-  };
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-slate-800">Mis Favoritos</h2>
+            <Button variant="outline" onClick={() => setSelectedSection('favorites')}>
+              Ver todos
+            </Button>
+          </div>
+          
+          {favorites.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Heart className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                    No tienes favoritos aún
+                  </h3>
+                  <p className="text-slate-600 mb-4">
+                    Guarda las propiedades que te gusten para encontrarlas fácilmente.
+                  </p>
+                  <Button onClick={() => navigate('/')}>
+                    <Search className="w-4 h-4 mr-2" />
+                    Explorar Propiedades
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {favorites.slice(0, 3).map((favorite) => (
+                <Card key={favorite.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-800 mb-1">
+                          {favorite.title}
+                        </h3>
+                        <p className="text-sm text-slate-600 mb-2">
+                          {favorite.location}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-slate-600">
+                            ${favorite.price}/noche
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            <span>{favorite.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/propiedad/${favorite.id}`)}
+                      >
+                        Ver
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
 
-  const handleExploreProperties = () => {
-    navigate('/');
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-slate-800">Actividad Reciente</h2>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm">Reserva confirmada</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 2 horas</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm">Propiedad agregada a favoritos</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 1 día</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span className="text-sm">Búsqueda realizada</span>
+                  </div>
+                  <span className="text-xs text-slate-500">Hace 2 días</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFavorites = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Mis Favoritos</h2>
+          <p className="text-slate-600">Propiedades que has guardado</p>
+        </div>
+        <Button onClick={() => navigate('/')}>
+          <Search className="w-4 h-4 mr-2" />
+          Explorar Más
+        </Button>
+      </div>
+
+      {favorites.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <Heart className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                No tienes favoritos aún
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Guarda las propiedades que te gusten para encontrarlas fácilmente.
+              </p>
+              <Button onClick={() => navigate('/')}>
+                <Search className="w-4 h-4 mr-2" />
+                Explorar Propiedades
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {favorites.map((favorite) => (
+            <Card key={favorite.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-1">
+                      {favorite.title}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {favorite.location}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-green-600">
+                      ${favorite.price}/noche
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      <span className="text-sm">{favorite.rating}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate(`/propiedad/${favorite.id}`)}
+                    >
+                      Ver
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Reservar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderReservations = () => (
+    <DevelopmentCard
+      title="Mis Reservas"
+      description="Panel para gestionar tus reservas y viajes."
+      icon={Calendar}
+      estimatedTime="En desarrollo"
+      features={[
+        "Lista de reservas",
+        "Historial de viajes",
+        "Calificaciones"
+      ]}
+      showProgress={true}
+      progress={20}
+    />
+  );
+
+  const renderSearches = () => (
+    <DevelopmentCard
+      title="Historial de Búsquedas"
+      description="Revisa tus búsquedas recientes."
+      icon={Search}
+      estimatedTime="En desarrollo"
+      features={[
+        "Historial de búsquedas",
+        "Búsquedas guardadas",
+        "Alertas de precio"
+      ]}
+      showProgress={true}
+      progress={15}
+    />
+  );
+
+  const renderProfile = () => (
+    <DevelopmentCard
+      title="Mi Perfil"
+      description="Gestiona tu información personal."
+      icon={User}
+      estimatedTime="En desarrollo"
+      features={[
+        "Información personal",
+        "Documentos de identidad",
+        "Configuración de privacidad"
+      ]}
+      showProgress={true}
+      progress={25}
+    />
+  );
+
+  const renderSettings = () => (
+    <DevelopmentCard
+      title="Configuración"
+      description="Configuración de tu cuenta y preferencias."
+      icon={Settings}
+      estimatedTime="En desarrollo"
+      features={[
+        "Configuración de cuenta",
+        "Preferencias de notificaciones",
+        "Configuración de seguridad"
+      ]}
+      showProgress={true}
+      progress={30}
+    />
+  );
+
+  const renderContent = () => {
+    switch (selectedSection) {
+      case 'overview':
+        return renderOverview();
+      case 'favorites':
+        return renderFavorites();
+      case 'reservations':
+        return renderReservations();
+      case 'searches':
+        return renderSearches();
+      case 'profile':
+        return renderProfile();
+      case 'settings':
+        return renderSettings();
+      default:
+        return renderOverview();
+    }
   };
 
   if (loading) {
@@ -79,174 +404,25 @@ const UserDashboardPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            Panel de Inquilino
-          </h1>
-          <p className="text-slate-600">
-            Gestiona tus reservas y verifica tu identidad
-          </p>
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        userRole="tenant"
+        onSectionChange={setSelectedSection}
+      />
+      
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {renderContent()}
+          </motion.div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Mi Perfil
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-slate-600">
-                  <span className="font-semibold">Nombre:</span> {user?.name}
-                </p>
-                <p className="text-sm text-slate-600">
-                  <span className="font-semibold">Email:</span> {user?.email}
-                </p>
-                <p className="text-sm text-slate-600">
-                  <span className="font-semibold">Estado:</span> 
-                  {user?.isEmailVerified ? (
-                    <Badge className="ml-2 bg-green-100 text-green-800">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Verificado
-                    </Badge>
-                  ) : (
-                    <Badge className="ml-2 bg-yellow-100 text-yellow-800">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      Pendiente
-                    </Badge>
-                  )}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Verificación de Identidad
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Estado:</span>
-                  {user.identityVerificationStatus === 'verified' ? (
-                    <Badge className="bg-green-100 text-green-800">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Verificada
-                    </Badge>
-                  ) : user.identityVerificationStatus === 'pending' ? (
-                    <Badge className="bg-yellow-100 text-yellow-800">
-                      <Clock className="w-3 h-3 mr-1" />
-                      En proceso
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-gray-100 text-gray-800">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      No verificada
-                    </Badge>
-                  )}
-                </div>
-                {user.identityVerificationStatus !== 'verified' && (
-                  <Button className="w-full" variant="outline" onClick={handleVerifyIdentity}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    {user.identityVerificationStatus === 'pending' ? 'Ver estado' : 'Verificar Identidad'}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Mis Reservas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">
-                  Tienes {reservations.length} reserva{reservations.length !== 1 ? 's' : ''} activa{reservations.length !== 1 ? 's' : ''}.
-                </p>
-                <Button className="w-full" variant="outline">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Ver Todas
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Reservas Recientes</h2>
-          
-          {reservations.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                    No tienes reservas aún
-                  </h3>
-                  <p className="text-slate-600 mb-4">
-                    Explora propiedades y haz tu primera reserva
-                  </p>
-                  <Button onClick={handleExploreProperties}>
-                    Explorar Propiedades
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reservations.map((reservation) => (
-                <Card key={reservation.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{reservation.property.title}</CardTitle>
-                      {getStatusBadge(reservation.status)}
-                    </div>
-                    <CardDescription>
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4" />
-                        {reservation.property.location}
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Check-in:</span>
-                        <span>{new Date(reservation.checkIn).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Check-out:</span>
-                        <span>{new Date(reservation.checkOut).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-semibold">
-                        <span>Total:</span>
-                        <span className="text-green-600">
-                          ${reservation.totalPrice}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
