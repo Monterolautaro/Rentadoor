@@ -10,7 +10,8 @@ export interface IProperty {
     environments: number;
     bathrooms: number;
     garages: number;
-    guests: number;
+    approx_m2: number;
+    rental_period: number;
     bedrooms: number;
     rating: number;
     image?: string;

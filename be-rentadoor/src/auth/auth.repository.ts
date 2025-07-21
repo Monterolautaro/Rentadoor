@@ -45,7 +45,9 @@ export class AuthRepository {
                     telefono: telephone,
                     rol: Roles.USER,
                     isEmailVerified: false,
-                    identityVerificationStatus: 'not_verified'
+                    identityVerificationStatus: 'not_verified',
+                    isDeleted: false,
+                    isSuspended: false
                 })
 
             if(error) return null;

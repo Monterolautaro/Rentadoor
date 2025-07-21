@@ -75,7 +75,6 @@ export class AuthService {
             throw new ConflictException('User already exists or error creating user');
         }
 
-        // Obtener el usuario creado para generar el token
         const createdUser = await this.authRepository.login({ email, password });
         
         if (!createdUser) {

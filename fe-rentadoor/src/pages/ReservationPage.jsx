@@ -9,14 +9,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { ChevronLeft, Briefcase, Users, FileText, DollarSign, UploadCloud, Trash2, Send } from 'lucide-react';
+import { reservationsService } from '@/services/reservationsService';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useProperties } from '@/hooks/useProperties';
 
 const ReservationPage = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthContext();
+  const { getPropertyById } = useProperties();
 
   const [property, setProperty] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [incomeSource, setIncomeSource] = useState('');
@@ -30,34 +34,37 @@ const ReservationPage = () => {
   const [documentation, setDocumentation] = useState([]);
   const [docPreviews, setDocPreviews] = useState([]);
   const [additionalEarners, setAdditionalEarners] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('currentUser_rentadoor'));
-    const allProperties = JSON.parse(localStorage.getItem('properties_rentadoor')) || [];
-    const foundProperty = allProperties.find(p => p.id.toString() === propertyId);
-
-    if (storedUser && foundProperty) {
-      setCurrentUser(storedUser);
-      setProperty(foundProperty);
-    } else {
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la información necesaria. Vuelve a intentarlo.",
-        variant: "destructive",
-      });
-      navigate('/');
+    const fetchProperty = async () => {
+      try {
+        const propertyData = await getPropertyById(propertyId);
+        setProperty(propertyData);
+      } catch (error) {
+        toast({
+          title: "Propiedad no encontrada",
+          description: "No pudimos encontrar los detalles para esta propiedad.",
+          variant: "destructive",
+        });
+        navigate('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (propertyId) {
+      fetchProperty();
     }
-    setLoading(false);
-  }, [propertyId, navigate, toast]);
+  }, [propertyId, getPropertyById, navigate, toast]);
 
   useEffect(() => {
     const count = Math.max(0, (incomeSourcesCount || 1) - 1);
     setAdditionalEarners(currentEarners => {
-        const newEarners = JSON.parse(JSON.stringify(currentEarners));
-        while (newEarners.length < count) {
-            newEarners.push({ fullName: '', dni: '', cuitCuil: '', incomeSource: '', employerName: '', income: '' });
-        }
-        return newEarners.slice(0, count);
+      const newEarners = JSON.parse(JSON.stringify(currentEarners));
+      while (newEarners.length < count) {
+        newEarners.push({ fullName: '', dni: '', cuitCuil: '', incomeSource: '', employerName: '', income: '' });
+      }
+      return newEarners.slice(0, count);
     });
   }, [incomeSourcesCount]);
 
@@ -85,80 +92,92 @@ const ReservationPage = () => {
     setDocPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
+    if (!user) {
+      toast({ title: "No autenticado", description: "Debes iniciar sesión para reservar.", variant: "destructive" });
+      return;
+    }
+    if (!property) {
+      toast({ title: "Propiedad no encontrada", description: "No se pudo cargar la propiedad.", variant: "destructive" });
+      return;
+    }
     let isFormValid = true;
     let validationMessage = "";
-
     if (!incomeSource || (incomeSource === 'dependencia' && !employerName) || !profession || !cuitCuil || !individualIncome || !totalIncome || documentation.length === 0) {
       isFormValid = false;
       validationMessage = "Por favor, completa todos los campos de tu información y sube la documentación requerida.";
     }
-
     if (isFormValid) {
-        for (const [index, earner] of additionalEarners.entries()) {
-            if (!earner.fullName || !earner.dni || !earner.cuitCuil || !earner.incomeSource || (earner.incomeSource === 'dependencia' && !earner.employerName) || !earner.income) {
-                isFormValid = false;
-                validationMessage = `Por favor, completa toda la información de la Persona Adicional ${index + 1}, incluyendo sus ingresos.`;
-                break;
-            }
+      for (const [index, earner] of additionalEarners.entries()) {
+        if (!earner.fullName || !earner.dni || !earner.cuitCuil || !earner.incomeSource || (earner.incomeSource === 'dependencia' && !earner.employerName) || !earner.income) {
+          isFormValid = false;
+          validationMessage = `Por favor, completa toda la información de la Persona Adicional ${index + 1}, incluyendo sus ingresos.`;
+          break;
         }
+      }
     }
-
     if (!isFormValid) {
       toast({ title: "Formulario incompleto", description: validationMessage, variant: "destructive" });
       return;
     }
-
-    const reservationData = {
-      id: `res_${Date.now()}`,
-      propertyId,
-      propertyTitle: property.title,
-      propertyPrice: property.monthlyRent || property.price,
-      propertyCurrency: property.currency,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      status: 'Pendiente',
-      ownerApprovalStatus: 'Pendiente',
-      paymentStatus: 'No Requerido',
-      contractStatus: 'No Requerido',
-      keysStatus: 'Pendiente Entrega',
-      application: {
-        incomeSource,
-        employerName: incomeSource === 'dependencia' ? employerName : undefined,
-        profession,
-        cohabitants,
-        cuitCuil,
-        incomeSourcesCount,
-        individualIncome: parseFloat(individualIncome),
-        totalIncome: parseFloat(totalIncome),
-        documentation: docPreviews.map(doc => doc.name),
-        additionalEarners: additionalEarners.map(earner => ({...earner, income: parseFloat(earner.income)})),
-      },
-      createdAt: new Date().toISOString(),
-    };
-
-    const existingReservations = JSON.parse(localStorage.getItem('reservations_rentadoor')) || [];
-    existingReservations.push(reservationData);
-    localStorage.setItem('reservations_rentadoor', JSON.stringify(existingReservations));
-
-    setTimeout(() => {
-      const allReservations = JSON.parse(localStorage.getItem('reservations_rentadoor')) || [];
-      const index = allReservations.findIndex(r => r.id === reservationData.id);
-      if (index !== -1) {
-        allReservations[index].status = 'Pendiente Aprobación Propietario';
-        localStorage.setItem('reservations_rentadoor', JSON.stringify(allReservations));
-        window.dispatchEvent(new Event('storage'));
+    setSubmitting(true);
+    try {
+      // Subir documentos primero (si hay)
+      let income_documents = [];
+      for (const file of documentation) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bucket', 'reservations-docs');
+        formData.append('table', 'encrypted_files');
+        const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/reservations/upload-document`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        const data = await res.json();
+       
+        if (data.url && typeof data.url === 'object' && data.url.id) income_documents.push(data.url.id);
+       
+        else if (typeof data.url === 'number') income_documents.push(data.url);
+       
+        else if (!isNaN(Number(data.url))) income_documents.push(Number(data.url));
       }
-    }, 3000);
-
-    toast({ 
-      title: "¡Reserva Enviada!", 
-      description: "Tu solicitud está siendo pre-aprobada. Recibirás una respuesta en un máximo de 48 horas.",
-      duration: 7000,
-    });
-    navigate('/dashboard/inquilino');
+      
+      const reservationPayload = {
+        property_id: Number(property.id),
+        user_id: Number(user.id),
+        owner_id: Number(property.owner_id),
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        main_applicant_name: user.name,
+        main_applicant_email: user.email,
+        main_applicant_phone: user.phone,
+        adults_count: 1,
+        children_count: 0,
+        cohabitants,
+        monthly_income: Number(individualIncome),
+        total_household_income: Number(totalIncome),
+        income_documents,
+        additional_documents: [],
+        owner_property_title: property.title,
+      };
+      await reservationsService.create(reservationPayload);
+      toast({
+        title: "¡Reserva Enviada!",
+        description: "Tu solicitud está siendo pre-aprobada. Recibirás una respuesta en un máximo de 48 horas.",
+        duration: 7000,
+      });
+      navigate('/dashboard/inquilino');
+    } catch (error) {
+      toast({
+        title: "Error al crear reserva",
+        description: error?.response?.data?.message || error.message || "No se pudo crear la reserva.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -237,8 +256,8 @@ const ReservationPage = () => {
 
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500">
-                <Send className="mr-2 h-4 w-4" /> Enviar Reserva
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500" disabled={submitting}>
+                <Send className="mr-2 h-4 w-4" /> {submitting ? 'Enviando...' : 'Enviar Reserva'}
               </Button>
             </CardFooter>
           </form>

@@ -41,8 +41,12 @@ export class CreatePropertyDto {
 
   @IsNumber()
   @Min(1)
-  @Max(20)
-  guests: number;
+  @Max(1000)
+  approxM2: number;
+
+  @IsNumber()
+  @IsIn([12, 18, 24, 36])
+  rentalPeriod: number;
 
   @IsNumber()
   @Min(1)

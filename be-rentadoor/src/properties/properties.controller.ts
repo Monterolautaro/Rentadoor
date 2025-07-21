@@ -10,6 +10,7 @@ import {
   Req,
   Query,
   ParseIntPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -19,16 +20,25 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { RolesDecorator } from '../common/decorators/roles.decorator';
 import { Roles } from '../common/enums/roles.enum';
 import { IRequestWithUser } from './interfaces/requestwithuser.interface';
+import { UserService } from '../user/user.service';
 
 @Controller('properties')
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+    private readonly userService: UserService
+  ) {}
 
   @Post()
   @RolesDecorator(Roles.ADMIN, Roles.USER)
   @UseGuards(AuthGuard, RolesGuard)
   async create(@Body() createPropertyDto: CreatePropertyDto, @Req() req: IRequestWithUser) {
     const ownerId = parseInt(req.user.id);
+
+    const user = await this.userService.getUserById(ownerId);
+    if (user.isSuspended) {
+      throw new ForbiddenException('No puedes crear propiedades porque tu cuenta está suspendida.');
+    }
     return this.propertiesService.create(createPropertyDto, ownerId);
   }
 
@@ -50,6 +60,13 @@ export class PropertiesController {
   @UseGuards(AuthGuard, RolesGuard)
   async findMyProperties(@Req() req: IRequestWithUser) {
     const ownerId = parseInt(req.user.id);
+    return this.propertiesService.findByOwner(ownerId);
+  }
+
+  @Get('owner/:ownerId')
+  @RolesDecorator(Roles.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  async getPropertiesByOwner(@Param('ownerId', ParseIntPipe) ownerId: number) {
     return this.propertiesService.findByOwner(ownerId);
   }
 

@@ -65,6 +65,8 @@ const IdentityVerificationPage = () => {
       const formData = new FormData();
       formData.append('files', selfie);
       formData.append('files', dni);
+      formData.append('bucket', 'encrypted');
+      formData.append('table', 'encrypted_files');
 
       const uploadResponse = await axios.post(`${API_URL}/storage/upload`, formData, {
         headers: {
@@ -73,14 +75,21 @@ const IdentityVerificationPage = () => {
         withCredentials: true
       });
 
+      if(!uploadResponse) {
+        toast({
+          title: "Hubo un problema al enviar los documentos",
+          description: "Reintentalo de nuevo, si el problema persiste contacta con administración.",
+        });
+      }
+
       toast({
         title: "¡Documentos Enviados!",
         description: "Hemos recibido tus documentos. La verificación puede tardar hasta 24 horas.",
       });
 
-      window.location.reload();
+      navigate('/mi-cuenta');
 
-      navigate('/dashboard/inquilino');
+      window.location.reload();
     } catch (error) {
       console.error('Error uploading files:', error);
       

@@ -25,7 +25,8 @@ export class PropertiesRepository {
         environments: createPropertyDto.environments,
         bathrooms: createPropertyDto.bathrooms,
         garages: createPropertyDto.garages,
-        guests: createPropertyDto.guests,
+        approx_m2: createPropertyDto.approxM2,
+        rental_period: createPropertyDto.rentalPeriod,
         bedrooms: createPropertyDto.bedrooms,
         rating: 0,
         image: createPropertyDto.allImages?.[0] || null,
@@ -108,7 +109,8 @@ export class PropertiesRepository {
     if (updatePropertyDto.environments) updateData.environments = updatePropertyDto.environments;
     if (updatePropertyDto.bathrooms !== undefined) updateData.bathrooms = updatePropertyDto.bathrooms;
     if (updatePropertyDto.garages !== undefined) updateData.garages = updatePropertyDto.garages;
-    if (updatePropertyDto.guests) updateData.guests = updatePropertyDto.guests;
+    if (updatePropertyDto.approxM2) updateData.approx_m2 = updatePropertyDto.approxM2;
+    if (updatePropertyDto.rentalPeriod) updateData.rental_period = updatePropertyDto.rentalPeriod;
     if (updatePropertyDto.bedrooms) updateData.bedrooms = updatePropertyDto.bedrooms;
     if (updatePropertyDto.allImages) {
       updateData.image = updatePropertyDto.allImages[0] || null;

@@ -19,6 +19,7 @@ import EmailConfirmationPage from '@/pages/EmailConfirmationPage';
 import EmailVerificationPage from '@/pages/EmailVerificationPage';
 import EmailVerificationRequiredPage from '@/pages/EmailVerificationRequiredPage';
 import { AuthProvider, useAuthContext } from '@/contexts/AuthContext';
+import ReservationDocumentsPage from './pages/ReservationDocumentsPage';
 
 const AppRoutes = () => {
   const { user, loading } = useAuthContext();
@@ -172,6 +173,16 @@ const AppRoutes = () => {
                 <AccountPage />
               </ProtectedRoute>
             }
+          />
+          <Route 
+            path="/dashboard/propietario/reserva/:reservationId/documentos" 
+            element={
+              <ProtectedRoute>
+                <EmailVerifiedRoute>
+                  <ReservationDocumentsPage />
+                </EmailVerifiedRoute>
+              </ProtectedRoute>
+            } 
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

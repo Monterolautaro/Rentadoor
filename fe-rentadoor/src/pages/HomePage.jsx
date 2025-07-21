@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import SearchBar from '@/components/SearchBar';
 import PropertyCard from '@/components/PropertyCard';
 import { useProperties } from '@/hooks/useProperties';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const HomePage = () => {
   const { properties, loading, loadAvailableProperties, searchProperties } = useProperties();
@@ -11,10 +12,10 @@ const HomePage = () => {
 
   // Mock properties para mostrar mientras no hay datos reales
   const mockProperties = [
-    { id: "mock-1", owner_id: "mock-owner", title: "Moderno Loft en Palermo", location: "Palermo, Buenos Aires", monthly_rent: 150000, currency: "ARS", type: "Departamento", environments: 2, bathrooms: 2, garages: 1, rating: 4.8, guests: 4, bedrooms: 1, description: "Hermoso loft moderno con todas las comodidades en el corazón de Palermo.", image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-2", owner_id: "mock-owner", title: "Elegante Apartamento en Recoleta", location: "Recoleta, Buenos Aires", monthly_rent: 900, currency: "USD", type: "Departamento", environments: 3, bathrooms: 2, garages: 1, rating: 4.9, guests: 6, bedrooms: 2, description: "Apartamento elegante y espacioso en una de las zonas más exclusivas de Buenos Aires.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-3", owner_id: "mock-owner", title: "Acogedor PH en San Telmo", location: "San Telmo, Buenos Aires", monthly_rent: 95000, currency: "ARS", type: "PH", environments: 3, bathrooms: 1, garages: 0, rating: 4.6, guests: 3, bedrooms: 2, description: "Estudio acogedor en el histórico barrio de San Telmo.", image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
-    { id: "mock-4", owner_id: "mock-owner", title: "Casa con Jardín en Belgrano", location: "Belgrano, Buenos Aires", monthly_rent: 1500, currency: "USD", type: "Casa", environments: 5, bathrooms: 3, garages: 2, rating: 5.0, guests: 8, bedrooms: 4, description: "Increíble casa con jardín y piscina en el tranquilo barrio de Belgrano R.", image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-1", owner_id: "mock-owner", title: "Moderno Loft en Palermo", location: "Palermo, Buenos Aires", monthly_rent: 150000, currency: "ARS", type: "Departamento", environments: 2, bathrooms: 2, garages: 1, rating: 4.8, approx_m2: 85, rental_period: 12, bedrooms: 1, description: "Hermoso loft moderno con todas las comodidades en el corazón de Palermo.", image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-2", owner_id: "mock-owner", title: "Elegante Apartamento en Recoleta", location: "Recoleta, Buenos Aires", monthly_rent: 900, currency: "USD", type: "Departamento", environments: 3, bathrooms: 2, garages: 1, rating: 4.9, approx_m2: 120, rental_period: 24, bedrooms: 2, description: "Apartamento elegante y espacioso en una de las zonas más exclusivas de Buenos Aires.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-3", owner_id: "mock-owner", title: "Acogedor PH en San Telmo", location: "San Telmo, Buenos Aires", monthly_rent: 95000, currency: "ARS", type: "PH", environments: 3, bathrooms: 1, garages: 0, rating: 4.6, approx_m2: 200, rental_period: 36, bedrooms: 3, description: "Estudio acogedor en el histórico barrio de San Telmo.", image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
+    { id: "mock-4", owner_id: "mock-owner", title: "Casa con Jardín en Belgrano", location: "Belgrano, Buenos Aires", monthly_rent: 1500, currency: "USD", type: "Casa", environments: 5, bathrooms: 3, garages: 2, rating: 5.0, approx_m2: 180, rental_period: 18, bedrooms: 4, description: "Increíble casa con jardín y piscina en el tranquilo barrio de Belgrano R.", image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80", status: "Disponible", all_images: ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]},
   ];
 
   // Función para normalizar propiedades (convertir campos de API a formato frontend)
@@ -27,11 +28,12 @@ const HomePage = () => {
       type: prop.type || 'Departamento',
       // Asegurar que los campos existan
       rating: prop.rating || 0,
-      guests: prop.guests || 1,
+      approxM2: prop.approx_m2 || prop.approxM2 || 0,
+      rentalPeriod: prop.rental_period || prop.rentalPeriod || 12,
       bedrooms: prop.bedrooms || 1,
     }));
   };
-
+  
   // Cargar propiedades al montar el componente
   useEffect(() => {
     const loadInitialProperties = async () => {

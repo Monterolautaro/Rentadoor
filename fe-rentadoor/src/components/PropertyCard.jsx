@@ -2,9 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Heart, Star, MapPin, Home, Bath, Car, Users, Building } from 'lucide-react';
+import { Heart, Star, MapPin, Home, Bath, Car, Users, Building, BedDouble, Ruler, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
@@ -20,11 +21,18 @@ const PropertyCard = ({ property }) => {
     navigate(`/propiedad/${property.id}`);
   };
 
-  const displayPrice = property.monthlyRent !== undefined ? property.monthlyRent : property.price;
-  const currencySymbol = property.currency === 'USD' ? 'U$S' : 'ARS';
-  const priceLabel = "/mes";
-  
-  const displayRooms = property.environments !== undefined ? `${property.environments} amb.` : `${property.bedrooms || 1} hab.`;
+  const formatPrice = (price, currency) => {
+    if (!price) return 'Consultar';
+    const formatter = new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: currency || 'ARS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    return formatter.format(price);
+  };
+
+  const displayRooms = property.environments ? `${property.environments} Ambientes` : 'N/A';
   
   const imageSrc = property.allImages && Array.isArray(property.allImages) && property.allImages.length > 0 
     ? property.allImages[0] 
@@ -54,7 +62,7 @@ const PropertyCard = ({ property }) => {
             <Heart className="h-5 w-5" />
           </Button>
           <div className="absolute bottom-2 left-2 bg-slate-800/90 text-white px-2 py-1 rounded-md text-sm font-semibold">
-            {currencySymbol} {displayPrice.toLocaleString('es-AR')} {priceLabel}
+            {formatCurrency(property.monthlyRent || property.monthly_rent, property.currency)} /mes
           </div>
         </div>
         <CardContent className="p-4 flex-grow flex flex-col justify-between">
@@ -81,8 +89,8 @@ const PropertyCard = ({ property }) => {
                 <span>{displayRooms}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-blue-600"/> 
-                <span>{property.guests} Huéspedes</span>
+                <Ruler className="h-4 w-4 text-blue-600"/> 
+                <span>{property.approxM2 || property.approx_m2 || 'N/A'}</span>
               </div>
               {property.bathrooms !== undefined && (
                 <div className="flex items-center gap-1.5">
@@ -94,6 +102,12 @@ const PropertyCard = ({ property }) => {
                  <div className="flex items-center gap-1.5">
                   <Car className="h-4 w-4 text-blue-600"/>
                   <span>{property.garages} Cochera{property.garages > 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {property.rentalPeriod !== undefined && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-blue-600"/>
+                  <span>{property.rentalPeriod || property.rental_period || 'N/A'} meses</span>
                 </div>
               )}
             </div>

@@ -283,22 +283,6 @@ const RegisterModal = ({ isOpen, onOpenChange }) => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Enlace de confirmación:</Label>
-                  <div className="flex space-x-2">
-                    <Input 
-                      value={confirmationLink} 
-                      readOnly 
-                      className="text-xs"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleCopyLink}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
               </div>
               <DialogFooter>
