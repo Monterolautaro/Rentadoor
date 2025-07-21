@@ -8,5 +8,7 @@ export interface IUser {
     contraseña: string,
     rol: Roles,
     isEmailVerified: boolean,
-    identityVerificationStatus?: string
+    identityVerificationStatus?: string,
+    isDeleted: boolean,
+    isSuspended: boolean
 }

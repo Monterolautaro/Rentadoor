@@ -129,5 +129,16 @@ export const propertiesService = {
       console.error('Error deleting property image:', error);
       throw error;
     }
+  },
+
+  
+  async getUserById(id) {
+    try {
+      const response = await axios.get(`${API_URL}/user/public/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      throw error;
+    }
   }
 }; 

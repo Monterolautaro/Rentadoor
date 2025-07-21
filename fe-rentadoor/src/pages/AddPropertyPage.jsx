@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { UploadCloud, PlusCircle, Trash2, DollarSign, BedDouble, Bath, Car, Home } from 'lucide-react';
+import { UploadCloud, PlusCircle, Trash2, DollarSign, BedDouble, Bath, Car, Home, Ruler } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
+import { NEIGHBORHOODS } from '@/utils/neighborhoods.utils';
 
 const AddPropertyPage = () => {
   const navigate = useNavigate();
@@ -27,7 +28,8 @@ const AddPropertyPage = () => {
   const [environments, setEnvironments] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [garages, setGarages] = useState('');
-  const [guests, setGuests] = useState('');
+  const [approxM2, setApproxM2] = useState('');
+  const [rentalPeriod, setRentalPeriod] = useState('12');
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -72,7 +74,7 @@ const AddPropertyPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !description || !location || !monthlyRent || !currency || !environments || !bathrooms || !garages || !guests) {
+    if (!title || !description || !location || !monthlyRent || !currency || !environments || !bathrooms || !garages || !approxM2 || !rentalPeriod) {
       toast({
         title: "Campos incompletos",
         description: "Por favor, rellena todos los campos obligatorios, incluyendo la moneda.",
@@ -108,7 +110,8 @@ const AddPropertyPage = () => {
         environments: parseInt(environments),
         bathrooms: parseInt(bathrooms),
         garages: parseInt(garages),
-        guests: parseInt(guests),
+        approxM2: parseFloat(approxM2),
+        rentalPeriod: parseInt(rentalPeriod),
         bedrooms: parseInt(environments > 1 ? environments - 1 : 1),
         allImages: imageUrls,
       };
@@ -125,7 +128,8 @@ const AddPropertyPage = () => {
       setEnvironments('');
       setBathrooms('');
       setGarages('');
-      setGuests('');
+      setApproxM2('');
+      setRentalPeriod('12');
       setImageFiles([]);
       setImagePreviews([]);
 
@@ -165,7 +169,18 @@ const AddPropertyPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location" className="text-slate-700">Ubicación</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ej: Palermo, Buenos Aires" />
+                  <Select value={location} onValueChange={setLocation}>
+                    <SelectTrigger id="location">
+                      <SelectValue placeholder="Seleccionar barrio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NEIGHBORHOODS.map((neighborhood) => (
+                        <SelectItem key={neighborhood} value={neighborhood}>
+                          {neighborhood}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -210,7 +225,7 @@ const AddPropertyPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="bathrooms" className="text-slate-700">Baños</Label>
                   <div className="relative">
@@ -226,48 +241,77 @@ const AddPropertyPage = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="guests" className="text-slate-700">Huéspedes Máximos</Label>
+                  <Label htmlFor="approxM2" className="text-slate-700">Aproximado m²</Label>
                   <div className="relative">
-                    <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input id="guests" type="number" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="Ej: 4" min="1" className="pl-8" />
+                    <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input id="approxM2" type="number" value={approxM2} onChange={(e) => setApproxM2(e.target.value)} placeholder="Ej: 85" min="1" className="pl-8" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rentalPeriod" className="text-slate-700">Periodo de Contrato</Label>
+                  <Select value={rentalPeriod} onValueChange={setRentalPeriod}>
+                    <SelectTrigger id="rentalPeriod">
+                      <SelectValue placeholder="Seleccionar periodo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">12 meses</SelectItem>
+                      <SelectItem value="18">18 meses</SelectItem>
+                      <SelectItem value="24">24 meses</SelectItem>
+                      <SelectItem value="36">36 meses</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <Label className="text-slate-700">Imágenes de la Propiedad</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group aspect-square">
-                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg border" />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6">
+                  <div className="flex flex-col items-center space-y-4">
+                    <UploadCloud className="h-12 w-12 text-slate-400 mb-2" />
+                    <div className="text-center">
+                      <p className="text-sm text-slate-600">
+                        Arrastra las imágenes aquí o haz clic para seleccionar
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        PNG, JPG hasta 10MB cada una
+                      </p>
                     </div>
-                  ))}
-                  {imagePreviews.length < 10 && (
-                    <div className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center hover:border-slate-400 transition-colors">
-                      <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
-                        <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
-                        <span className="text-sm text-slate-500">Agregar imagen</span>
-                      </label>
-                      <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageChange}
-                        className="hidden"
-                      />
-                    </div>
-                  )}
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-md transition-colors"
+                    >
+                      Seleccionar Imágenes
+                    </label>
+                  </div>
                 </div>
+
+                {imagePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg border" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImage(index)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-sm text-slate-500">
                   Puedes subir hasta 10 imágenes. La primera imagen será la principal.
                 </p>

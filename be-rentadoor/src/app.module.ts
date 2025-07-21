@@ -9,6 +9,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { EncryptionModule } from './encryption/encryption.module';
 import { StorageModule } from './storage/storage.module';
 import { PropertiesModule } from './properties/properties.module';
+import { ReservationsModule } from './reservations/reservations.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PropertiesModule } from './properties/properties.module';
     EncryptionModule,
     StorageModule,
     PropertiesModule,
+    ReservationsModule,
+    AdminModule,
     JwtModule.register({
       global: true,
       signOptions: { expiresIn: '35m' },

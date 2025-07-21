@@ -10,6 +10,11 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
 import Sidebar from '@/components/Sidebar';
 import DevelopmentCard from '@/components/DevelopmentCard';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { useReservations } from '@/hooks/useReservations';
+import ReservationDetailsModal from '@/components/ReservationDetailsModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { X} from 'lucide-react';
 
 const OwnerDashboardPage = () => {
   const [reservations, setReservations] = useState([]);
@@ -20,6 +25,11 @@ const OwnerDashboardPage = () => {
   const { user } = useAuthContext();
   const navigate = useNavigate();
   const { properties, loadMyProperties, loading: propertiesLoading } = useProperties();
+  const { reservations: allReservations, loading: loadingReservations, fetchAll, approveAsOwner, fetchByOwner } = useReservations();
+  const [showTenantModal, setShowTenantModal] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingReservationId, setRejectingReservationId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,9 +39,11 @@ const OwnerDashboardPage = () => {
         // Cargar propiedades del usuario
         await loadMyProperties();
         
-        // Por ahora, como no existe el endpoint de reservas, usamos datos locales
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setReservations([]);
+        if (user) {
+          // Obtener reservas del owner
+          const data = await fetchByOwner(user.id);
+          setReservations(data);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -47,7 +59,7 @@ const OwnerDashboardPage = () => {
     if (user) {
       fetchData();
     }
-  }, [user, loadMyProperties, toast]);
+  }, [user, loadMyProperties, toast, fetchByOwner]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -70,12 +82,70 @@ const OwnerDashboardPage = () => {
     );
   };
 
+  const getReservationStatusBadge = (status) => {
+    const config = {
+      pendiente: { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' },
+      preaprobada_admin: { color: 'bg-yellow-100 text-yellow-800', label: 'Preaprobada por Admin' },
+      aprobada: { color: 'bg-green-100 text-green-800', label: 'Aprobada' },
+      rechazada_admin: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Admin' },
+      rechazada_owner: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Propietario' },
+    };
+    const c = config[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    return <Badge className={c.color}>{c.label}</Badge>;
+  };
+
   const handleAddProperty = () => {
     navigate('/dashboard/propietario/agregar');
   };
 
   const handleViewProperty = (propertyId) => {
     navigate(`/propiedad/${propertyId}`);
+  };
+
+  const handleShowTenant = (reservation) => {
+    setSelectedTenant({
+      id: reservation.user_id,
+      nombre: reservation.main_applicant_name,
+      email: reservation.main_applicant_email,
+      telefono: reservation.main_applicant_phone,
+    });
+    setShowTenantModal(true);
+  };
+
+  const handleRejectReservation = (reservationId) => {
+    setRejectingReservationId(reservationId);
+    setShowRejectModal(true);
+  };
+
+  const confirmRejectReservation = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/reservations/${rejectingReservationId}/owner-reject`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      toast({ title: 'Reserva rechazada', description: 'La reserva ha sido rechazada.' });
+      setShowRejectModal(false);
+      setRejectingReservationId(null);
+      setReservations(prev => prev.map(r =>
+        r.id === rejectingReservationId ? { ...r, status: 'rechazada_owner' } : r
+      ));
+      if (user) await fetchByOwner(user.id);
+    } catch (error) {
+      toast({ title: 'Error', description: 'No se pudo rechazar la reserva.', variant: 'destructive' });
+    }
+  };
+
+  const handleApproveReservation = async (reservationId) => {
+    try {
+      await approveAsOwner(reservationId);
+      toast({ title: 'Reserva aprobada', description: 'La reserva ha sido aprobada.' });
+      setReservations(prev => prev.map(r =>
+        r.id === reservationId ? { ...r, status: 'aprobada' } : r
+      ));
+      if (user) await fetchByOwner(user.id);
+    } catch (error) {
+      toast({ title: 'Error', description: 'No se pudo aprobar la reserva.', variant: 'destructive' });
+    }
   };
 
   const renderOverview = () => (
@@ -115,26 +185,6 @@ const OwnerDashboardPage = () => {
               </p>
               <p className="text-sm text-slate-600">
                 Reservas confirmadas
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Ingresos Mensuales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p className="text-2xl font-bold text-green-600">
-                {/* TODO: Implementar endpoint para ingresos */}
-                -
-              </p>
-              <p className="text-sm text-slate-600">
-                Este mes
               </p>
             </div>
           </CardContent>
@@ -204,7 +254,7 @@ const OwnerDashboardPage = () => {
                         </p>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="text-slate-600">
-                            ${property.monthlyRent}/mes
+                            {formatCurrency(property.monthlyRent || property.monthly_rent, property.currency)} /mes
                           </span>
                           {getStatusBadge(property.status || 'Disponible')}
                         </div>
@@ -231,38 +281,6 @@ const OwnerDashboardPage = () => {
               )}
             </div>
           )}
-        </div>
-
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Actividad Reciente</h2>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">Nueva reserva confirmada</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 2 horas</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">Pago recibido</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 1 día</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm">Nueva solicitud de reserva</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 2 días</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
@@ -316,7 +334,7 @@ const OwnerDashboardPage = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-green-600">
-                      ${property.price}/noche
+                      {formatCurrency(property.monthlyRent || property.monthly_rent, property.currency)} /mes
                     </span>
                     {getStatusBadge(property.status || 'Disponible')}
                   </div>
@@ -350,19 +368,117 @@ const OwnerDashboardPage = () => {
   );
 
   const renderReservations = () => (
-    <DevelopmentCard
-      title="Mis Reservas"
-      description="Panel para gestionar las reservas de tus propiedades."
-      icon={Calendar}
-      estimatedTime="En desarrollo"
-      features={[
-        "Lista de reservas",
-        "Confirmar reservas",
-        "Historial de reservas"
-      ]}
-      showProgress={true}
-      progress={20}
-    />
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-slate-800 mb-4">Reservas de mis propiedades</h2>
+      {loadingReservations ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+        </div>
+      ) : reservations.length === 0 ? (
+        <div className="text-center py-8 text-slate-600">No hay reservas registradas.</div>
+      ) : (
+        <div className="space-y-6">
+          {reservations
+            .filter(r => r.owner_id === user?.id)
+            .map((reservation) => (
+              <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <span className="font-semibold text-lg text-slate-800">{reservation.property_title || reservation.property_id}</span>
+                    {/* <span className="ml-2">#{reservation.id}</span> */}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 md:mt-0">
+                    {getReservationStatusBadge(reservation.status)}
+                  </div>
+                </div>
+                <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Fechas</div>
+                    <div className="font-medium text-slate-700">{reservation.start_date} &rarr; {reservation.end_date}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Inquilino</div>
+                    <div className="font-medium text-slate-700">{reservation.main_applicant_name || reservation.user_id}</div>
+                    <Button size="xs" variant="outline" className="mt-2" onClick={() => handleShowTenant(reservation)}>
+                      Ver Inquilino
+                    </Button>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
+                    <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Documentos</div>
+                    <div className="flex flex-wrap gap-2">
+                      {reservation.income_documents?.length || reservation.additional_documents?.length ? (
+                        <Button size="xs" variant="outline" onClick={() => navigate(`/dashboard/propietario/reserva/${reservation.id}/documentos`)}>
+                          Ver documentos
+                        </Button>
+                      ) : 'No adjuntos'}
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between px-6 pb-4 gap-2">
+                  <div className="text-xs text-slate-500">Estado actual: {getReservationStatusBadge(reservation.status)}</div>
+                  <div className="flex gap-2 items-center mt-2 md:mt-0">
+                    {reservation.status === 'preaprobada_admin' && (
+                      <>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveReservation(reservation.id)}>
+                          <CheckCircle className="mr-1 h-4 w-4" /> Aprobar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleRejectReservation(reservation.id)}>
+                          <X className="mr-1 h-4 w-4" /> Rechazar
+                        </Button>
+                      </>
+                    )}
+                    {reservation.status === 'aprobada' && (
+                      <span className="text-xs text-green-700 font-semibold">Aprobada</span>
+                    )}
+                    {reservation.status === 'pendiente' && (
+                      <span className="text-xs text-blue-600 font-semibold">Pendiente de aprobación admin</span>
+                    )}
+                    {(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
+                      <span className="text-xs text-red-600 font-semibold">Rechazada</span>
+                    )}
+                    <ReservationDetailsModal reservation={reservation} />
+                  </div>
+                </div>
+              </Card>
+            ))}
+        </div>
+      )}
+      {/* Modal de inquilino */}
+      <Dialog open={showTenantModal && !!selectedTenant} onOpenChange={setShowTenantModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalle de Inquilino</DialogTitle>
+          </DialogHeader>
+          {selectedTenant ? (
+            <div className="space-y-2">
+              {/* <div><b>ID:</b> {selectedTenant.id}</div> */}
+              <div><b>Nombre:</b> {selectedTenant.nombre}</div>
+              <div><b>Email:</b> {selectedTenant.email}</div>
+              <div><b>Teléfono:</b> {selectedTenant.telefono}</div>
+            </div>
+          ) : <div>No se encontró el usuario.</div>}
+        </DialogContent>
+      </Dialog>
+      {/* Modal de rechazo */}
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar Reserva</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>¿Estás seguro que deseas rechazar esta reserva? El usuario será notificado.</div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowRejectModal(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmRejectReservation}>Rechazar Reserva</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 
   const renderIncome = () => (

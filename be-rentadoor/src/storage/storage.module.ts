@@ -10,6 +10,7 @@ import { EncryptionService } from "src/encryption/encryption.service";
 @Module({
     imports: [SupabaseModule, AuthModule, UserModule],
     controllers: [StorageController],
-    providers: [StorageService, StorageRepository, EncryptionService]
+    providers: [StorageService, StorageRepository, EncryptionService],
+    exports: [StorageService]
 })
 export class StorageModule{}

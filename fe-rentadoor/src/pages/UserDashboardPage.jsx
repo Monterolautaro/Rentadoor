@@ -9,6 +9,11 @@ import { Home, Calendar, Heart, User, Settings, Search, MapPin, Star, Clock, Che
 import { useAuthContext } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import DevelopmentCard from '@/components/DevelopmentCard';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { useReservations } from '@/hooks/useReservations';
+import { useProperties } from '@/hooks/useProperties';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { propertiesService } from '@/services/propertiesService';
 
 const UserDashboardPage = () => {
   const [favorites, setFavorites] = useState([]);
@@ -19,6 +24,16 @@ const UserDashboardPage = () => {
   const { toast } = useToast();
   const { user } = useAuthContext();
   const navigate = useNavigate();
+  const { reservations, loading: loadingReservations, fetchByUser } = useReservations();
+  const { getPropertyById } = useProperties();
+  const [propertyDetails, setPropertyDetails] = useState(null);
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [owners, setOwners] = useState({});
+  const [propertyTitles, setPropertyTitles] = useState({});
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [selectedOwner, setSelectedOwner] = useState(null);
+  const [ownerLoading, setOwnerLoading] = useState(false);
+  const [ownerError, setOwnerError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,6 +46,8 @@ const UserDashboardPage = () => {
         // Por ahora, datos vacíos hasta implementar endpoints
         setFavorites([]);
         setRecentSearches([]);
+        // Obtener reservas reales del usuario
+        if (user) await fetchByUser(user.id);
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -46,7 +63,81 @@ const UserDashboardPage = () => {
     if (user) {
       fetchData();
     }
-  }, [user, toast]);
+  }, [user, toast, fetchByUser]);
+
+  // Obtener datos de propietarios para las reservas
+  useEffect(() => {
+    const fetchOwners = async () => {
+      const newOwners = {};
+      for (const reservation of reservations) {
+        if (reservation.property_id && !newOwners[reservation.property_id]) {
+          try {
+            const property = await getPropertyById(reservation.property_id);
+            newOwners[reservation.property_id] = {
+              ownerName: property.owner_name || property.ownerNombre || property.owner || '-',
+              ownerEmail: property.owner_email || property.ownerEmail || '-',
+              ownerPhone: property.owner_phone || property.ownerPhone || '-',
+              property,
+              ownerId: property.owner_id,
+            };
+          } catch {
+            newOwners[reservation.property_id] = { ownerName: '-', ownerEmail: '-', ownerPhone: '-', property: null, ownerId: null };
+          }
+        }
+      }
+      setOwners(newOwners);
+    };
+    if (reservations.length > 0) fetchOwners();
+  }, [reservations, getPropertyById]);
+
+  useEffect(() => {
+    // Obtener títulos de propiedades para las reservas
+    const fetchTitles = async () => {
+      const titles = {};
+      for (const reservation of reservations) {
+        if (reservation.property_id && !titles[reservation.property_id]) {
+          try {
+            const property = await getPropertyById(reservation.property_id);
+            titles[reservation.property_id] = property?.title || '-';
+          } catch {
+            titles[reservation.property_id] = '-';
+          }
+        }
+      }
+      setPropertyTitles(titles);
+    };
+    if (reservations.length > 0) fetchTitles();
+  }, [reservations, getPropertyById]);
+
+  const handleShowProperty = (propertyId) => {
+    navigate(`/propiedad/${propertyId}`);
+  };
+
+  const handleShowOwner = async (propertyId) => {
+    if (owners[propertyId]) {
+      setOwnerLoading(true);
+      setOwnerError(null);
+      setShowOwnerModal(true);
+      try {
+        const ownerId = owners[propertyId].ownerId;
+        if (ownerId) {
+          const user = await propertiesService.getUserById(ownerId);
+          setSelectedOwner({
+            ownerName: user.nombre || '-',
+            ownerEmail: user.email || '-',
+            ownerPhone: user.telefono || '-',
+          });
+        } else {
+          setSelectedOwner({ ownerName: '-', ownerEmail: '-', ownerPhone: '-' });
+        }
+      } catch (err) {
+        setOwnerError('No se pudo cargar el propietario.');
+        setSelectedOwner({ ownerName: '-', ownerEmail: '-', ownerPhone: '-' });
+      } finally {
+        setOwnerLoading(false);
+      }
+    }
+  };
 
   const renderOverview = () => (
     <div className="space-y-6">
@@ -80,8 +171,7 @@ const UserDashboardPage = () => {
           <CardContent>
             <div className="space-y-2">
               <p className="text-2xl font-bold text-slate-800">
-                {/* TODO: Implementar endpoint para mis reservas */}
-                -
+                {loadingReservations ? '-' : reservations.length}
               </p>
               <p className="text-sm text-slate-600">
                 Reservas activas
@@ -89,143 +179,6 @@ const UserDashboardPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Calificaciones
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p className="text-2xl font-bold text-slate-800">
-                {/* TODO: Implementar endpoint para calificaciones */}
-                -
-              </p>
-              <p className="text-sm text-slate-600">
-                Promedio recibido
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Búsquedas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p className="text-2xl font-bold text-slate-800">
-                {recentSearches.length}
-              </p>
-              <p className="text-sm text-slate-600">
-                Búsquedas recientes
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-slate-800">Mis Favoritos</h2>
-            <Button variant="outline" onClick={() => setSelectedSection('favorites')}>
-              Ver todos
-            </Button>
-          </div>
-          
-          {favorites.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                    No tienes favoritos aún
-                  </h3>
-                  <p className="text-slate-600 mb-4">
-                    Guarda las propiedades que te gusten para encontrarlas fácilmente.
-                  </p>
-                  <Button onClick={() => navigate('/')}>
-                    <Search className="w-4 h-4 mr-2" />
-                    Explorar Propiedades
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {favorites.slice(0, 3).map((favorite) => (
-                <Card key={favorite.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-800 mb-1">
-                          {favorite.title}
-                        </h3>
-                        <p className="text-sm text-slate-600 mb-2">
-                          {favorite.location}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-slate-600">
-                            ${favorite.price}/noche
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span>{favorite.rating}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/propiedad/${favorite.id}`)}
-                      >
-                        Ver
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Actividad Reciente</h2>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">Reserva confirmada</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 2 horas</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">Propiedad agregada a favoritos</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 1 día</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm">Búsqueda realizada</span>
-                  </div>
-                  <span className="text-xs text-slate-500">Hace 2 días</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
@@ -277,9 +230,7 @@ const UserDashboardPage = () => {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-green-600">
-                      ${favorite.price}/noche
-                    </span>
+                    <span className="text-lg font-bold text-green-600">{formatCurrency(favorite.monthlyRent || favorite.monthly_rent, favorite.currency)} /mes</span>
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-current" />
                       <span className="text-sm">{favorite.rating}</span>
@@ -312,20 +263,66 @@ const UserDashboardPage = () => {
     </div>
   );
 
+  const getReservationStatusBadge = (status) => {
+    const config = {
+      pendiente: { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' },
+      preaprobada_admin: { color: 'bg-yellow-100 text-yellow-800', label: 'Preaprobada por Admin' },
+      aprobada: { color: 'bg-green-100 text-green-800', label: 'Aprobada' },
+      rechazada_admin: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Admin' },
+      rechazada_owner: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Propietario' },
+    };
+    const c = config[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    return <Badge className={c.color}>{c.label}</Badge>;
+  };
+
   const renderReservations = () => (
-    <DevelopmentCard
-      title="Mis Reservas"
-      description="Panel para gestionar tus reservas y viajes."
-      icon={Calendar}
-      estimatedTime="En desarrollo"
-      features={[
-        "Lista de reservas",
-        "Historial de viajes",
-        "Calificaciones"
-      ]}
-      showProgress={true}
-      progress={20}
-    />
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-slate-800 mb-4">Mis Reservas</h2>
+      {loadingReservations ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+        </div>
+      ) : reservations.length === 0 ? (
+        <div className="text-center py-8 text-slate-600">No tienes reservas registradas.</div>
+      ) : (
+        <div className="space-y-6">
+          {reservations.map((reservation) => (
+            <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
+                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                  <span className="font-semibold text-lg text-slate-800">{propertyTitles[reservation.property_id] || '-'}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                  {getReservationStatusBadge(reservation.status)}
+                </div>
+              </div>
+              <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Fechas</div>
+                  <div className="font-medium text-slate-700">{reservation.start_date} &rarr; {reservation.end_date}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Propietario</div>
+                  <Button size="xs" variant="outline" onClick={() => handleShowOwner(reservation.property_id)}>
+                    Ver Propietario
+                  </Button>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
+                  <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Propiedad</div>
+                  <Button size="xs" variant="outline" onClick={() => handleShowProperty(reservation.property_id)}>
+                    Ver detalles
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   const renderSearches = () => (
@@ -423,6 +420,26 @@ const UserDashboardPage = () => {
           </motion.div>
         </div>
       </div>
+      <Dialog open={showOwnerModal && !!selectedOwner} onOpenChange={setShowOwnerModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalle de Propietario</DialogTitle>
+          </DialogHeader>
+          {ownerLoading ? (
+            <div className="flex justify-center items-center h-20">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-800"></div>
+            </div>
+          ) : ownerError ? (
+            <div className="text-red-600">{ownerError}</div>
+          ) : selectedOwner ? (
+            <div className="space-y-2">
+              <div><b>Nombre:</b> {selectedOwner.ownerName}</div>
+              <div><b>Email:</b> {selectedOwner.ownerEmail}</div>
+              <div><b>Teléfono:</b> {selectedOwner.ownerPhone}</div>
+            </div>
+          ) : <div>No se encontró el propietario.</div>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

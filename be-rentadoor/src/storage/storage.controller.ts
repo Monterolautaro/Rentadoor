@@ -63,8 +63,12 @@ export class StorageController {
         }
 
         const userId = req.user.id;
+        const { bucket, table } = req.body;
+        if (!bucket || !table || typeof bucket !== 'string' || typeof table !== 'string') {
+            throw new BadRequestException('Debes enviar los parámetros bucket y table en el FormData');
+        }
 
-        const existingFiles = await this.storageService.getEncryptedFiles(userId);
+        const existingFiles = await this.storageService.getEncryptedFiles(userId, table);
         if (existingFiles.length > 0) {
             throw new ConflictException('Ya has subido documentos de verificación. No puedes volver a enviar.');
         }
@@ -73,17 +77,21 @@ export class StorageController {
 
         const selfieRecord = await this.storageService.uploadEncryptedFile(
             selfie.buffer,
-            userId,
+            +(userId),
             `selfie_${selfie.originalname}`,
+            bucket,
+            table
         );
 
         const dniRecord = await this.storageService.uploadEncryptedFile(
             dni.buffer,
-            userId,
+            +(userId),
             `dni_${dni.originalname}`,
+            bucket,
+            table
         );
 
-        const updateResult = await this.authRepository.updateIdentityVerificationStatus(userId, 'pending');
+        await this.authRepository.updateIdentityVerificationStatus(userId, 'pending');
 
         return { selfie: selfieRecord, dni: dniRecord };
     }
@@ -156,25 +164,27 @@ export class StorageController {
     @RolesDecorator(Roles.ADMIN)
     @UseGuards(AuthGuard, RolesGuard)
     async getAllFiles() {
-        return await this.storageService.getEncryptedFiles();
+        return await this.storageService.getEncryptedFiles(undefined, 'encrypted_files');
     }
 
     @Get(':userId')
     @RolesDecorator(Roles.ADMIN)
     @UseGuards(AuthGuard, RolesGuard)
     async getUserFiles(@Param('userId') userId: string) {
-        return await this.storageService.getEncryptedFiles(userId);
+        return await this.storageService.getEncryptedFiles(userId, 'encrypted_files');
     }
 
     @Get('download/:fileId')
-    @RolesDecorator(Roles.ADMIN)
+    @RolesDecorator(Roles.ADMIN, Roles.USER)
     @UseGuards(AuthGuard, RolesGuard)
-    async downloadFile(@Param('fileId') fileId: string) {
-        const { fileName, buffer } = await this.storageService.downloadAndDecryptFile(fileId);
+    async downloadFile(@Param('fileId') fileId: string, @Req() req) {
+      
+      const bucket = req.query.bucket || 'encrypted';
+      const { fileName, buffer } = await this.storageService.downloadAndDecryptFile(fileId, 'encrypted_files', bucket);
 
-        return {
-            fileName,
-            base64: buffer.toString('base64'),
-        };
+      return {
+        fileName,
+        base64: buffer.toString('base64'),
+      };
     }
 }

@@ -61,6 +61,12 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
       description: 'Gestionar propiedades'
     },
     {
+      id: 'reservations',
+      title: 'Reservas',
+      icon: Calendar,
+      description: 'Gestionar reservas'
+    },
+    {
       id: 'verifications',
       title: 'Verificaciones',
       icon: UserCheck,
@@ -135,7 +141,6 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
 
   return (
     <div className="flex">
-      {/* Sidebar */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -146,7 +151,6 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
             className="bg-white border-r border-slate-200 h-screen overflow-y-auto"
           >
             <div className="p-6 space-y-6">
-              {/* Header */}
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-800">
                   {userRole === 'admin' ? 'Panel Admin' : 
@@ -159,11 +163,10 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
                   onClick={onToggle}
                   className="p-1"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-6 w-6" />
                 </Button>
               </div>
 
-              {/* Navegación */}
               <div>
                 <h3 className="text-sm font-medium text-slate-700 mb-3">Navegación</h3>
                 <div className="space-y-2">
@@ -189,24 +192,23 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
                 </div>
               </div>
 
-              {/* Acciones rápidas para admin */}
               {userRole === 'admin' && (
                 <div>
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Acciones Rápidas</h3>
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('verifications'); }}>
                       <UserCheck className="h-4 w-4 mr-2" />
                       Aprobar Usuario
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('users'); }}>
                       <UserX className="h-4 w-4 mr-2" />
                       Suspender Usuario
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('users'); }}>
                       <Ban className="h-4 w-4 mr-2" />
                       Banear Usuario
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('properties'); }}>
                       <Trash2 className="h-4 w-4 mr-2" />
                       Eliminar Propiedad
                     </Button>
@@ -214,16 +216,15 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
                 </div>
               )}
 
-              {/* Acciones rápidas para propietario */}
               {userRole === 'owner' && (
                 <div>
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Acciones Rápidas</h3>
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/dashboard/propietario/agregar')}>
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar Propiedad
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('reservations'); }}>
                       <Calendar className="h-4 w-4 mr-2" />
                       Ver Reservas
                     </Button>
@@ -231,18 +232,17 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
                 </div>
               )}
 
-              {/* Acciones rápidas para inquilino */}
               {userRole === 'tenant' && (
                 <div>
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Acciones Rápidas</h3>
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/') }>
                       <Search className="h-4 w-4 mr-2" />
                       Buscar Propiedades
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => { if (onSectionChange) onSectionChange('reservations'); }}>
                       <Calendar className="h-4 w-4 mr-2" />
-                      Ver Reservas
+                      Mis Reservas
                     </Button>
                   </div>
                 </div>
@@ -252,7 +252,6 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
         )}
       </AnimatePresence>
 
-      {/* Toggle button cuando sidebar está cerrado */}
       {!isOpen && (
         <div className="flex items-center">
           <Button
@@ -261,7 +260,7 @@ const Sidebar = ({ isOpen, onToggle, userRole = 'user', onSectionChange }) => {
             onClick={onToggle}
             className="p-2"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-6 w-6" />
           </Button>
         </div>
       )}
