@@ -14,6 +14,7 @@ import { useReservations } from '@/hooks/useReservations';
 import { useProperties } from '@/hooks/useProperties';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { propertiesService } from '@/services/propertiesService';
+import ReservationDetailsModal from '@/components/ReservationDetailsModal';
 
 const UserDashboardPage = () => {
   const [favorites, setFavorites] = useState([]);
@@ -25,7 +26,7 @@ const UserDashboardPage = () => {
   const { user } = useAuthContext();
   const navigate = useNavigate();
   const { reservations, loading: loadingReservations, fetchByUser } = useReservations();
-  const { getPropertyById } = useProperties();
+  const { properties, getPropertyById } = useProperties();
   const [propertyDetails, setPropertyDetails] = useState(null);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [owners, setOwners] = useState({});
@@ -264,15 +265,17 @@ const UserDashboardPage = () => {
   );
 
   const getReservationStatusBadge = (status) => {
-    const config = {
-      pendiente: { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' },
-      preaprobada_admin: { color: 'bg-yellow-100 text-yellow-800', label: 'Preaprobada por Admin' },
-      aprobada: { color: 'bg-green-100 text-green-800', label: 'Aprobada' },
-      rechazada_admin: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Admin' },
-      rechazada_owner: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Propietario' },
-    };
-    const c = config[status] || { color: 'bg-gray-100 text-gray-800', label: status };
-    return <Badge className={c.color}>{c.label}</Badge>;
+    let badge = { color: '', label: '' };
+    if (status === 'aprobada') {
+      badge = { color: 'bg-green-100 text-green-800', label: 'Aprobada' };
+    } else if (status === 'rechazada_admin' || status === 'rechazada_owner') {
+      badge = { color: 'bg-red-100 text-red-800', label: 'Rechazada' };
+    } else if (status === 'pendiente' || status === 'preaprobada_admin') {
+      badge = { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' };
+    } else {
+      badge = { color: 'bg-gray-100 text-gray-800', label: status };
+    }
+    return <Badge className={badge.color}>{badge.label}</Badge>;
   };
 
   const renderReservations = () => (
@@ -294,12 +297,13 @@ const UserDashboardPage = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   {getReservationStatusBadge(reservation.status)}
+                  <ReservationDetailsModal reservation={reservation} property={properties?.find(p => p.id === reservation.property_id)} />
                 </div>
               </div>
               <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <div className="text-xs text-slate-500 mb-1">Fechas</div>
-                  <div className="font-medium text-slate-700">{reservation.start_date} &rarr; {reservation.end_date}</div>
+                  <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
+                  <div className="font-medium text-slate-700">{(properties?.find(p => p.id === reservation.property_id)?.rental_period || properties?.find(p => p.id === reservation.property_id)?.rentalPeriod || 'N/A')} meses</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Propietario</div>
@@ -315,6 +319,11 @@ const UserDashboardPage = () => {
                   <div className="text-xs text-slate-500 mb-1">Propiedad</div>
                   <Button size="xs" variant="outline" onClick={() => handleShowProperty(reservation.property_id)}>
                     Ver detalles
+                  </Button>
+                </div>
+                <div>
+                  <Button size="xs" variant="outline" onClick={() => navigate(`/pagos/${reservation.id}`)}>
+                    Ver pagos
                   </Button>
                 </div>
               </CardContent>

@@ -8,6 +8,8 @@ import { MapPin, Users, Home, Bath, Car, DollarSign, ChevronLeft, ChevronRight, 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
 import { useReservations } from '@/hooks/useReservations';
+import ImageZoomModal from '@/components/ImageZoomModal';
+import HigherImage from '@/components/HigherImage';
 
 const PropertyDetailPage = () => {
   const { propertyId } = useParams();
@@ -22,6 +24,8 @@ const PropertyDetailPage = () => {
   const [property, setProperty] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [miniStart, setMiniStart] = useState(0);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImageSrc, setZoomImageSrc] = useState(null);
 
   // Normalizar las imágenes para mostrar
   const imagesToShow = property?.all_images && property.all_images.length > 0 
@@ -150,6 +154,13 @@ const PropertyDetailPage = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      {zoomModalOpen && (
+        <HigherImage
+          imageSrc={zoomImageSrc}
+          alt={property?.title}
+          onClose={() => setZoomModalOpen(false)}
+        />
+      )}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -178,9 +189,7 @@ const PropertyDetailPage = () => {
                     </Button>
                   )}
                   {visibleMiniatures.map((img, idx) => {
-                    // El índice real en el array de imágenes
                     const realIdx = miniStart + idx;
-                    // Si es la última miniatura visible y hay más imágenes, mostrar flecha en vez de miniatura
                     if (idx === MINIATURES_SHOWN - 1 && canGoNextMini) {
                       return (
                         <Button
@@ -200,7 +209,11 @@ const PropertyDetailPage = () => {
                         key={realIdx}
                         className={`border-2 rounded-lg overflow-hidden focus:outline-none transition-all duration-150 shadow-sm bg-white hover:border-blue-400 ${currentImageIndex === realIdx ? 'border-blue-600 ring-2 ring-blue-200' : 'border-slate-200'}`}
                         style={{ width: 64, height: 64 }}
-                        onClick={() => setCurrentImageIndex(realIdx)}
+                        onClick={() => {
+                          setCurrentImageIndex(realIdx);
+                          setZoomImageSrc(img);
+                          setZoomModalOpen(true);
+                        }}
                         aria-label={`Ver imagen ${realIdx + 1}`}
                       >
                         <img src={img} alt={`Miniatura ${realIdx + 1}`} className="object-cover w-full h-full" />
@@ -213,7 +226,11 @@ const PropertyDetailPage = () => {
                   <img
                     src={imagesToShow[currentImageIndex]}
                     alt={`Imagen ${currentImageIndex + 1} de ${property.title}`}
-                    className="object-contain rounded-xl max-h-[420px] w-full transition-all duration-200"
+                    className="object-contain rounded-xl max-h-[420px] w-full transition-all duration-200 cursor-zoom-in"
+                    onClick={() => {
+                      setZoomImageSrc(imagesToShow[currentImageIndex]);
+                      setZoomModalOpen(true);
+                    }}
                   />
                   {imagesToShow.length > 1 && (
                     <>

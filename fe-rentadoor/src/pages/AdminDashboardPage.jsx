@@ -187,15 +187,17 @@ const AdminDashboardPage = () => {
   };
 
   const getReservationStatusBadge = (status) => {
-    const config = {
-      pendiente: { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' },
-      preaprobada_admin: { color: 'bg-yellow-100 text-yellow-800', label: 'Preaprobada por Admin' },
-      aprobada: { color: 'bg-green-100 text-green-800', label: 'Aprobada' },
-      rechazada_admin: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Admin' },
-      rechazada_owner: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Propietario' },
-    };
-    const c = config[status] || { color: 'bg-gray-100 text-gray-800', label: status };
-    return <Badge className={c.color}>{c.label}</Badge>;
+    let badge = { color: '', label: '' };
+    if (status === 'aprobada') {
+      badge = { color: 'bg-green-100 text-green-800', label: 'Aprobada' };
+    } else if (status === 'rechazada_admin' || status === 'rechazada_owner') {
+      badge = { color: 'bg-red-100 text-red-800', label: 'Rechazada' };
+    } else if (status === 'pendiente' || status === 'preaprobada_admin') {
+      badge = { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' };
+    } else {
+      badge = { color: 'bg-gray-100 text-gray-800', label: status };
+    }
+    return <Badge className={badge.color}>{badge.label}</Badge>;
   };
 
   const renderOverview = () => (
@@ -471,12 +473,13 @@ const AdminDashboardPage = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   {getReservationStatusBadge(reservation.status)}
+                  <ReservationDetailsModal reservation={reservation} property={property} />
                 </div>
               </div>
               <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <div className="text-xs text-slate-500 mb-1">Fechas</div>
-                  <div className="font-medium text-slate-700">{reservation.start_date} &rarr; {reservation.end_date}</div>
+                  <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
+                  <div className="font-medium text-slate-700">{property?.rental_period || property?.rentalPeriod || 'N/A'} meses</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Inquilino</div>
@@ -490,6 +493,12 @@ const AdminDashboardPage = () => {
                 </div>
               </CardContent>
               <CardContent className="py-2 px-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Pagos</div>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
+                    <Eye className="w-4 h-4 mr-2" /> Ver pagos
+                  </Button>
+                </div>
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
                   <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
@@ -518,6 +527,9 @@ const AdminDashboardPage = () => {
                       </Button>
                     </>
                   )}
+                  <Button size="xs" variant="outline" onClick={() => navigate(`/contract/${reservation.id}`)}>
+                    Ver contrato
+                  </Button>
                 </div>
               </div>
             </Card>

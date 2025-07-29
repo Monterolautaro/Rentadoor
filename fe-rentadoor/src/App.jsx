@@ -20,6 +20,9 @@ import EmailVerificationPage from '@/pages/EmailVerificationPage';
 import EmailVerificationRequiredPage from '@/pages/EmailVerificationRequiredPage';
 import { AuthProvider, useAuthContext } from '@/contexts/AuthContext';
 import ReservationDocumentsPage from './pages/ReservationDocumentsPage';
+import ReservationPaymentsPage from '@/pages/ReservationPaymentsPage';
+import ContractViewPage from '@/pages/ContractViewPage';
+import AdminPaymentsReviewPage from '@/pages/AdminPaymentsReviewPage';
 
 const AppRoutes = () => {
   const { user, loading } = useAuthContext();
@@ -183,6 +186,30 @@ const AppRoutes = () => {
                 </EmailVerifiedRoute>
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="/pagos/:reservationId"
+            element={
+              <ProtectedRoute>
+                <ReservationPaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pagos/:reservationId"
+            element={
+              <ProtectedRoute>
+                <AdminPaymentsReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contrato/:contractId"
+            element={
+              <ProtectedRoute>
+                <ContractViewPage />
+              </ProtectedRoute>
+            }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
