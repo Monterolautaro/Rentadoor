@@ -11,6 +11,8 @@ import { StorageModule } from './storage/storage.module';
 import { PropertiesModule } from './properties/properties.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { AdminModule } from './admin/admin.module';
+import { ContractsModule } from './contracts/contracts.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { AdminModule } from './admin/admin.module';
     PropertiesModule,
     ReservationsModule,
     AdminModule,
+    PaymentsModule,
+    ContractsModule,
     JwtModule.register({
       global: true,
       signOptions: { expiresIn: '35m' },

@@ -83,15 +83,17 @@ const OwnerDashboardPage = () => {
   };
 
   const getReservationStatusBadge = (status) => {
-    const config = {
-      pendiente: { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' },
-      preaprobada_admin: { color: 'bg-yellow-100 text-yellow-800', label: 'Preaprobada por Admin' },
-      aprobada: { color: 'bg-green-100 text-green-800', label: 'Aprobada' },
-      rechazada_admin: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Admin' },
-      rechazada_owner: { color: 'bg-red-100 text-red-800', label: 'Rechazada por Propietario' },
-    };
-    const c = config[status] || { color: 'bg-gray-100 text-gray-800', label: status };
-    return <Badge className={c.color}>{c.label}</Badge>;
+    let badge = { color: '', label: '' };
+    if (status === 'aprobada') {
+      badge = { color: 'bg-green-100 text-green-800', label: 'Aprobada' };
+    } else if (status === 'rechazada_admin' || status === 'rechazada_owner') {
+      badge = { color: 'bg-red-100 text-red-800', label: 'Rechazada' };
+    } else if (status === 'pendiente' || status === 'preaprobada_admin') {
+      badge = { color: 'bg-blue-100 text-blue-800', label: 'Pendiente' };
+    } else {
+      badge = { color: 'bg-gray-100 text-gray-800', label: status };
+    }
+    return <Badge className={badge.color}>{badge.label}</Badge>;
   };
 
   const handleAddProperty = () => {
@@ -393,8 +395,8 @@ const OwnerDashboardPage = () => {
                 </div>
                 <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <div className="text-xs text-slate-500 mb-1">Fechas</div>
-                    <div className="font-medium text-slate-700">{reservation.start_date} &rarr; {reservation.end_date}</div>
+                    <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
+                    <div className="font-medium text-slate-700">{(properties?.find(p => p.id === reservation.property_id)?.rental_period || properties?.find(p => p.id === reservation.property_id)?.rentalPeriod || 'N/A')} meses</div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Inquilino</div>
@@ -415,6 +417,26 @@ const OwnerDashboardPage = () => {
                           Ver documentos
                         </Button>
                       ) : 'No adjuntos'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Pagos</div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-700">Primer mes:</span>
+                        <span className="text-yellow-600">pendiente</span>
+                        <span className="text-xs text-slate-400">-</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-700">Mes de depósito:</span>
+                        <span className="text-yellow-600">pendiente</span>
+                        <span className="text-xs text-slate-400">-</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-700">Depósito:</span>
+                        <span className="text-yellow-600">pendiente</span>
+                        <span className="text-xs text-slate-400">-</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -440,9 +462,12 @@ const OwnerDashboardPage = () => {
                     {(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
                       <span className="text-xs text-red-600 font-semibold">Rechazada</span>
                     )}
-                    <ReservationDetailsModal reservation={reservation} />
+                    <ReservationDetailsModal reservation={reservation} property={properties?.find(p => p.id === reservation.property_id)} />
                   </div>
                 </div>
+                <Button size="xs" variant="outline" onClick={() => navigate(`/contract/${reservation.id}`)}>
+                  Ver contrato
+                </Button>
               </Card>
             ))}
         </div>

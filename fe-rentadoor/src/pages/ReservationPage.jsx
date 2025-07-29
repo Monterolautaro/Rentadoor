@@ -161,6 +161,10 @@ const ReservationPage = () => {
         income_documents,
         additional_documents: [],
         owner_property_title: property.title,
+        income_source: incomeSource,
+        employer_name: employerName,
+        profession: profession,
+        cuit_cuil: cuitCuil,
       };
       await reservationsService.create(reservationPayload);
       toast({
