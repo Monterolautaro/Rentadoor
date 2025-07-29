@@ -19,6 +19,10 @@ export interface IReservation {
   monthly_income?: number;
   total_household_income?: number;
   income_documents?: string[];
+  income_source?: string;
+  employer_name?: string;
+  profession?: string;
+  cuit_cuil?: string;
 
   additional_documents?: string[];
   owner_property_title?: string;

@@ -59,4 +59,20 @@ export class CreateReservationDto {
   @IsOptional()
   @IsString()
   owner_property_title?: string;
+
+  @IsOptional()
+  @IsString()
+  income_source?: string;
+
+  @IsOptional()
+  @IsString()
+  employer_name?: string;
+
+  @IsOptional()
+  @IsString()
+  profession?: string;
+
+  @IsOptional()
+  @IsString()
+  cuit_cuil?: string;
 } 
