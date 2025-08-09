@@ -73,26 +73,7 @@ export class ReservationsService {
       admin_preapproved: true,
       admin_preapproved_at: new Date().toISOString(),
     });
-
-    const userEmail = await this.getUserEmailById(updated.user_id);
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1e293b;">¡Tu reserva ha sido pre-aprobada! - Rentadoor</h2>
-        <p>Hola,</p>
-        <p>Nos complace informarte que tu solicitud de reserva ha sido <span style="color: #059669; font-weight: bold;">pre-aprobada por el equipo de administración</span>.</p>
-        <p><b>Siguiente paso:</b> La reserva será revisada por el propietario de la propiedad. Te notificaremos cuando el propietario tome una decisión.</p>
-        <p>Gracias por confiar en Rentadoor.</p>
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
-        <p style="font-size: 14px; color: #64748b;">Si tienes dudas, puedes responder a este correo.<br>Equipo de Rentadoor</p>
-      </div>
-    `;
-    await this.emailService.sendMail(
-      userEmail,
-      'Reserva pre-aprobada por administración',
-      'Tu reserva ha sido pre-aprobada por administración. Siguiente paso: revisión por parte del propietario.',
-      html
-    );
-
+    // Eliminado el envío de correo aquí
     return updated;
   }
 
@@ -114,9 +95,9 @@ export class ReservationsService {
     const userEmail = await this.getUserEmailById(updated.user_id);
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #059669;">¡Felicidades! Tu reserva ha sido aprobada por el propietario - Rentadoor</h2>
+        <h2 style="color: #059669;">¡Felicidades! Tu reserva ha sido aprobada - Rentadoor</h2>
         <p>Hola,</p>
-        <p>El propietario ha <span style="color: #059669; font-weight: bold;">aprobado</span> tu solicitud de reserva.</p>
+        <p>Tu solicitud de reserva ha sido <span style="color: #059669; font-weight: bold;">aprobada</span>.</p>
         <p>En breves, estará llegando un contrato auto-generado que tendrán que firmar ambas partes para finalizar el proceso.</p>
         <p>¡Gracias por confiar en Rentadoor!</p>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
@@ -125,8 +106,8 @@ export class ReservationsService {
     `;
     await this.emailService.sendMail(
       userEmail,
-      '¡Felicidades! El propietario aprobó tu reserva',
-      'El propietario ha aprobado tu reserva. Pronto recibirás el contrato para firmar.',
+      '¡Felicidades! Tu reserva ha sido aprobada',
+      'Tu reserva ha sido aprobada. Pronto recibirás el contrato para firmar.',
       html
     );
 
@@ -147,27 +128,23 @@ export class ReservationsService {
       owner_approved: false,
       owner_approved_at: new Date().toISOString(),
     });
-    
     const userEmail = await this.getUserEmailById(updated.user_id);
-
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1e293b;">Reserva rechazada por el propietario - Rentadoor</h2>
+        <h2 style="color: #1e293b;">Reserva rechazada - Rentadoor</h2>
         <p>Hola,</p>
-        <p>Lamentamos informarte que el propietario ha decidido <span style="color: #dc2626; font-weight: bold;">rechazar</span> tu solicitud de reserva.</p>
-        <p>Puedes contactar con el propietario o buscar otras propiedades disponibles en nuestra plataforma.</p>
+        <p>Lamentamos informarte que tu solicitud de reserva ha sido <span style="color: #dc2626; font-weight: bold;">rechazada</span>.</p>
+        <p>Puedes buscar otras propiedades disponibles en nuestra plataforma.</p>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
         <p style="font-size: 14px; color: #64748b;">Si tienes dudas, puedes responder a este correo.<br>Equipo de Rentadoor</p>
       </div>
     `;
-
     await this.emailService.sendMail(
       userEmail,
-      'Reserva rechazada por el propietario',
-      'El propietario ha decidido rechazar tu solicitud de reserva.',
+      'Reserva rechazada',
+      'Tu solicitud de reserva ha sido rechazada.',
       html
     );
-
     return updated;
   }
 
