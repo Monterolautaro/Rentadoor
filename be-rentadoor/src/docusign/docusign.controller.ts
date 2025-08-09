@@ -35,15 +35,15 @@ export class DocuSignController {
     try {
       const envelopeId = body.envelopeId || body.envelope_id;
       const status = body.status || body.envelopeStatus;
-      // Buscar el contrato por envelopeId
+
       const supabase = this.contractsRepository['supabaseService'].getClient();
       const { data: contract } = await supabase.from('contracts').select('*').eq('envelope_id', envelopeId).single();
       if (!contract) return { ok: false };
       if (status === 'completed') {
-        // Descargar PDF firmado
+  
         const out = `/tmp/${envelopeId}.pdf`;
         await this.ds.downloadCombinedDocument(envelopeId, out);
-        // Subir PDF firmado a storage y obtener la URL real
+      
         const signedPdfUrl = await this.ds.handleSignedContract(contract.reservation_id, envelopeId, out);
         await this.contractsRepository.updateSignatureFields(contract.reservation_id, {
           signature_status: 'completed',
