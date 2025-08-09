@@ -14,6 +14,7 @@ import {
     BadRequestException,
     ConflictException,
     Delete,
+    Res,
 } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -22,7 +23,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RolesDecorator } from '../common/decorators/roles.decorator';
 import { Roles } from '../common/enums/roles.enum';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AuthRepository } from '../auth/auth.repository';
 
 // Extender el tipo Request para incluir user
@@ -139,6 +140,27 @@ export class StorageController {
     async getPropertyImage(@Param('imageName') imageName: string) {
         const imageUrl = await this.storageService.getPropertyImageUrl(imageName);
         return { url: imageUrl };
+    }
+
+    @Get('payments/*filePath')
+    @UseGuards(AuthGuard, RolesGuard)
+    @RolesDecorator(Roles.ADMIN, Roles.USER)
+    async getPaymentFile(@Param('filePath') filePath: string, @Res() res: Response) {
+   
+      const cleanFilePath =  `${filePath[0]}/${filePath[1]}`
+
+      const supabase = this.storageService['storageRepository'].getClient();
+      const { data, error } = await supabase.storage.from('payments').download(cleanFilePath);
+      if (error || !data) {
+        return res.status(404).json({ message: 'Archivo no encontrado', error: error?.message });
+      }
+      
+      const mimeType = cleanFilePath.endsWith('.pdf') ? 'application/pdf' : cleanFilePath.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image/*' : 'application/octet-stream';
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${cleanFilePath.split('/').pop()}"`);
+      data.arrayBuffer().then(buffer => {
+        res.send(Buffer.from(buffer));
+      });
     }
 
     @Get('test-roles')

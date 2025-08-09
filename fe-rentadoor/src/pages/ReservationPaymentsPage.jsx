@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, FileText, PenTool, CheckCircle, XCircle, ChevronLeft } from 'lucide-react';
+import { UploadCloud, FileText, PenTool, CheckCircle, XCircle, ChevronLeft, X, Trash2 } from 'lucide-react';
 import { paymentsService } from '@/services/paymentsService';
 import { useAuthContext } from '@/contexts/AuthContext';
+import ImageZoomModal from '@/components/ImageZoomModal';
+import HigherImage from '@/components/HigherImage';
 
 const paymentTypes = [
   { key: 'primer_mes', label: 'Primer mes' },
@@ -19,6 +21,10 @@ const ReservationPaymentsPage = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState({});
   const [globalStatus, setGlobalStatus] = useState('pendiente');
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImageSrc, setModalImageSrc] = useState(null);
+  const [modalFileType, setModalFileType] = useState('image');
+  const [modalObjectUrl, setModalObjectUrl] = useState(null);
 
   useEffect(() => {
     if (reservationId) {
@@ -32,9 +38,9 @@ const ReservationPaymentsPage = () => {
     try {
       const data = await paymentsService.getPaymentsByReservation(reservationId);
       setPayments(data || []);
-      // Determinar estado global
+    
       if (Array.isArray(data) && data.length > 0) {
-        // El estado global es el status del primer pago (todos deben tener el mismo)
+       
         setGlobalStatus(data[0].status || 'pendiente');
       } else {
         setGlobalStatus('pendiente');
@@ -77,12 +83,43 @@ const ReservationPaymentsPage = () => {
     input.click();
   };
 
-  const handleViewFile = (fileUrl) => {
+  const handleDelete = async (paymentId) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este comprobante?')) return;
+    try {
+      await paymentsService.deletePayment(paymentId);
+      await fetchPayments();
+    } catch (err) {
+      alert('Error eliminando comprobante');
+    }
+  };
+
+  const handleViewFile = async (fileUrl) => {
     if (!fileUrl) return;
-    // Si la URL es relativa, agregar el dominio del backend
-    const isAbsolute = fileUrl.startsWith('http');
-    const url = isAbsolute ? fileUrl : `${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/storage/public/payments/${fileUrl}`;
-    window.open(url, '_blank');
+    
+    const cleanFileUrl = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+    const url = `${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/storage/payments/${cleanFileUrl}`;
+    if (url.endsWith('.pdf')) {
+      setModalFileType('pdf');
+    } else {
+      setModalFileType('image');
+    }
+    // Fetch con credenciales y crear object URL
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('No se pudo cargar el comprobante');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setModalObjectUrl(objectUrl);
+      setShowImageModal(true);
+    } catch {
+      alert('No se pudo cargar el comprobante');
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (modalObjectUrl) URL.revokeObjectURL(modalObjectUrl);
+    setShowImageModal(false);
+    setModalObjectUrl(null);
   };
 
   const getPaymentForType = (type) => payments.find((p) => p.type === type) || {};
@@ -105,7 +142,7 @@ const ReservationPaymentsPage = () => {
         <div className="mb-6 flex items-center gap-3">
           {globalStatus === 'aprobado' && <CheckCircle className="h-6 w-6 text-green-600" />}
           {globalStatus === 'rechazado' && <XCircle className="h-6 w-6 text-red-600" />}
-          <span className={`font-bold text-lg ${statusColor[globalStatus]}`}>Estado global: {globalStatus.charAt(0).toUpperCase() + globalStatus.slice(1)}</span>
+          <span className={`font-bold text-lg ${statusColor[globalStatus]}`}>Estado: {globalStatus.charAt(0).toUpperCase() + globalStatus.slice(1)}</span>
         </div>
         {globalStatus === 'rechazado' && (
           <div className="mb-4 text-red-600 text-sm">El pago fue rechazado. Por favor, vuelve a subir los comprobantes y contacta a soporte si tienes dudas.</div>
@@ -117,7 +154,6 @@ const ReservationPaymentsPage = () => {
               <div key={pt.key} className="flex flex-col md:flex-row md:items-center md:justify-between border-b pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
                 <div>
                   <div className="text-lg font-semibold text-slate-700">{pt.label}</div>
-                  <div className="text-xs text-slate-500 mb-1">Estado: <span className={`font-bold ${statusColor[payment.status || 'pendiente']}`}>{payment.status || 'pendiente'}</span></div>
                   {payment.file_url ? (
                     <button type="button" className="text-blue-600 underline text-sm" onClick={() => handleViewFile(payment.file_url)}>
                       Ver comprobante
@@ -126,10 +162,15 @@ const ReservationPaymentsPage = () => {
                     <span className="text-slate-400 text-sm">No adjuntado</span>
                   )}
                 </div>
-                <div className="mt-2 md:mt-0">
-                  <Button variant="outline" onClick={() => handleUpload(pt.key)} disabled={uploading[pt.key] || globalStatus === 'aprobado' || !!payment.file_url}>
-                    <UploadCloud className="mr-2 h-5 w-5" /> {uploading[pt.key] ? 'Subiendo...' : 'Subir comprobante'}
+                <div className="mt-2 md:mt-0 flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="px-2 py-1 text-xs" onClick={() => handleUpload(pt.key)} disabled={uploading[pt.key] || globalStatus === 'aprobado' || !!payment.file_url}>
+                    <UploadCloud className="mr-1 h-4 w-4" /> {uploading[pt.key] ? 'Subiendo...' : 'Subir comprobante'}
                   </Button>
+                  {globalStatus === 'rechazado' && payment.file_url && (
+                    <button type="button" className="ml-1 p-1 rounded hover:bg-red-100" title="Eliminar comprobante" onClick={() => handleDelete(payment.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -144,6 +185,24 @@ const ReservationPaymentsPage = () => {
           </div>
         )}
       </div>
+      {showImageModal && modalObjectUrl && (
+        modalFileType === 'image' ? (
+          <HigherImage imageSrc={modalObjectUrl} onClose={handleCloseModal} alt="Comprobante de pago" />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+            <button
+              onClick={handleCloseModal}
+              className="absolute top-6 right-6 z-50 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition"
+              aria-label="Cerrar"
+            >
+              <X className="h-6 w-6 text-gray-700" />
+            </button>
+            <div className="flex items-center justify-center w-full h-full max-w-[98vw] max-h-[98vh] overflow-hidden">
+              <iframe src={modalObjectUrl} title="Comprobante PDF" className="rounded-xl shadow-2xl object-contain border border-white bg-white" style={{ width: '60vw', height: '80vh' }} />
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 };

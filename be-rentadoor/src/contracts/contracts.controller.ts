@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, UseGuards, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -34,6 +34,24 @@ export class ContractsController {
     const { fileName, buffer } = await this.contractsService.downloadAndDecryptContract(contractId);
     return {
       fileName,
+      base64: buffer.toString('base64'),
+    };
+  }
+
+  @Get('download-pdf/:reservationId')
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
+  @UseGuards(AuthGuard, RolesGuard)
+  async downloadContractPdf(@Param('reservationId') reservationId: number) {
+    const contract = await this.contractsService.getContractByReservation(reservationId);
+    if (!contract || !contract.file_url) throw new NotFoundException('Contrato no encontrado');
+    const supabase = this.contractsService['supabaseService'].getClient();
+    const { data, error } = await supabase.storage
+      .from('contracts')
+      .download(contract.file_url);
+    if (error) throw new BadRequestException('Error descargando contrato: ' + error.message);
+    const buffer = Buffer.from(await data.arrayBuffer());
+    return {
+      fileName: `contrato_${reservationId}.pdf`,
       base64: buffer.toString('base64'),
     };
   }

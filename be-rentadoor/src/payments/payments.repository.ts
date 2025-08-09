@@ -7,7 +7,9 @@ export class PaymentsRepository {
 
   async savePaymentFile(reservationId: number, userId: number, type: string, file: any) {
     const supabase = this.supabaseService.getClient();
-    const filePath = `reservation_${reservationId}/${type}_${Date.now()}.pdf`;
+
+    const ext = file.originalname.split('.').pop();
+    const filePath = `reservation_${reservationId}/${type}_${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('payments')
       .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
@@ -50,5 +52,15 @@ export class PaymentsRepository {
       .select('*');
     if (error) throw new BadRequestException('Error actualizando estado de pago: ' + error.message);
     return data;
+  }
+
+  async deletePayment(id: number) {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('payments')
+      .delete()
+      .eq('id', id);
+    if (error) throw new BadRequestException('Error eliminando comprobante: ' + error.message);
+    return { success: true };
   }
 }

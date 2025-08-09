@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PaymentsService } from './payments.service';
 
@@ -28,5 +28,10 @@ export class PaymentsController {
   @Post('reject')
   async rejectPayment(@Body() body: { reservationId: number, motivo?: string }) {
     return this.paymentsService.rejectPayment(body.reservationId, body.motivo);
+  }
+
+  @Delete(':id')
+  async deletePayment(@Param('id') id: number) {
+    return this.paymentsService.deletePayment(id);
   }
 }

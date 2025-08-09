@@ -48,7 +48,7 @@ const ReservationDetailsModal = ({ reservation, property }) => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-slate-700 flex items-center"><Calendar className="mr-2 h-5 w-5 text-green-600"/>Período de Contrato</h3>
             <div className="grid grid-cols-2 gap-4 text-sm p-4 bg-slate-50 rounded-md">
-              <div className="col-span-2"><p className="font-medium text-slate-500">Duración</p><p>{property?.rental_period || property?.rentalPeriod || 'N/A'} meses</p></div>
+              <div className="col-span-2"><p className="font-medium text-slate-500">Duración</p><p>{property && property.rental_period ? `${property.rental_period} meses` : 'N/A'}</p></div>
             </div>
           </div>
         </div>

@@ -30,6 +30,7 @@ const OwnerDashboardPage = () => {
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectingReservationId, setRejectingReservationId] = useState(null);
+  const [contractStatus, setContractStatus] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,6 +61,24 @@ const OwnerDashboardPage = () => {
       fetchData();
     }
   }, [user, loadMyProperties, toast, fetchByOwner]);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      const statuses = {};
+      for (const reservation of reservations) {
+        try {
+          // Llama al endpoint real de reserva para obtener contract_status
+          const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/reservations/${reservation.id}`, { credentials: 'include' });
+          const data = await res.json();
+          statuses[reservation.id] = data && data.contract_status ? data.contract_status : null;
+        } catch {
+          statuses[reservation.id] = null;
+        }
+      }
+      setContractStatus(statuses);
+    };
+    if (reservations.length > 0) fetchContracts();
+  }, [reservations]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -383,17 +402,17 @@ const OwnerDashboardPage = () => {
           {reservations
             .filter(r => r.owner_id === user?.id)
             .map((reservation) => (
-              <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200">
+              <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200 mb-6 rounded-xl">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <span className="font-semibold text-lg text-slate-800">{reservation.property_title || reservation.property_id}</span>
-                    {/* <span className="ml-2">#{reservation.id}</span> */}
+                    <span className="font-semibold text-lg text-slate-800">{reservation.owner_property_title || properties?.find(p => p.id === reservation.property_id)?.title || reservation.property_id}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-2 md:mt-0">
                     {getReservationStatusBadge(reservation.status)}
+                    <ReservationDetailsModal reservation={reservation} property={properties?.find(p => p.id === reservation.property_id)} />
                   </div>
                 </div>
-                <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <CardContent className="py-6 px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
                     <div className="font-medium text-slate-700">{(properties?.find(p => p.id === reservation.property_id)?.rental_period || properties?.find(p => p.id === reservation.property_id)?.rentalPeriod || 'N/A')} meses</div>
@@ -409,65 +428,19 @@ const OwnerDashboardPage = () => {
                     <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
                     <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Documentos</div>
-                    <div className="flex flex-wrap gap-2">
-                      {reservation.income_documents?.length || reservation.additional_documents?.length ? (
-                        <Button size="xs" variant="outline" onClick={() => navigate(`/dashboard/propietario/reserva/${reservation.id}/documentos`)}>
-                          Ver documentos
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Contrato</div>
+                      {(contractStatus[reservation.id] === 'enviado') ? (
+                        <Button size="xs" variant="outline" onClick={() => navigate(`/contrato/${reservation.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" /> Ver contrato
                         </Button>
-                      ) : 'No adjuntos'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-700">Primer mes:</span>
-                        <span className="text-yellow-600">pendiente</span>
-                        <span className="text-xs text-slate-400">-</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-700">Mes de depósito:</span>
-                        <span className="text-yellow-600">pendiente</span>
-                        <span className="text-xs text-slate-400">-</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-700">Depósito:</span>
-                        <span className="text-yellow-600">pendiente</span>
-                        <span className="text-xs text-slate-400">-</span>
-                      </div>
+                      ) : (
+                        <span className="text-slate-400 text-sm">Contrato en preparación</span>
+                      )}
                     </div>
                   </div>
                 </CardContent>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between px-6 pb-4 gap-2">
-                  <div className="text-xs text-slate-500">Estado actual: {getReservationStatusBadge(reservation.status)}</div>
-                  <div className="flex gap-2 items-center mt-2 md:mt-0">
-                    {reservation.status === 'preaprobada_admin' && (
-                      <>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveReservation(reservation.id)}>
-                          <CheckCircle className="mr-1 h-4 w-4" /> Aprobar
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleRejectReservation(reservation.id)}>
-                          <X className="mr-1 h-4 w-4" /> Rechazar
-                        </Button>
-                      </>
-                    )}
-                    {reservation.status === 'aprobada' && (
-                      <span className="text-xs text-green-700 font-semibold">Aprobada</span>
-                    )}
-                    {reservation.status === 'pendiente' && (
-                      <span className="text-xs text-blue-600 font-semibold">Pendiente de aprobación admin</span>
-                    )}
-                    {(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
-                      <span className="text-xs text-red-600 font-semibold">Rechazada</span>
-                    )}
-                    <ReservationDetailsModal reservation={reservation} property={properties?.find(p => p.id === reservation.property_id)} />
-                  </div>
-                </div>
-                <Button size="xs" variant="outline" onClick={() => navigate(`/contract/${reservation.id}`)}>
-                  Ver contrato
-                </Button>
               </Card>
             ))}
         </div>

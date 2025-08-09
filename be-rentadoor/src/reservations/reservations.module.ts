@@ -10,6 +10,6 @@ import { EmailModule } from 'src/email/email.module';
   imports: [SupabaseModule, StorageModule, EmailModule],
   controllers: [ReservationsController],
   providers: [ReservationsService, ReservationsRepository],
-  exports: [ReservationsService]
+  exports: [ReservationsService, ReservationsRepository]
 })
 export class ReservationsModule {} 
