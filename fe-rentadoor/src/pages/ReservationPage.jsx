@@ -167,7 +167,7 @@ const ReservationPage = () => {
         cuit_cuil: cuitCuil,
       };
       const reservation = await reservationsService.create(reservationPayload);
-      // Guardar co-earners si hay additionalEarners
+      
       if (reservation && reservation.id && additionalEarners.length > 0) {
         for (const earner of additionalEarners) {
           await reservationsService.addCoEarner(reservation.id, {

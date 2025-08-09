@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle, Eye, TrendingUp, Settings, FileText, BarChart3 } from 'lucide-react';
+import { Building, Plus, Calendar, DollarSign, Users, Home, CheckCircle, Clock, AlertCircle, Eye, TrendingUp, Settings, FileText, BarChart3, XCircle } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
 import Sidebar from '@/components/Sidebar';
@@ -429,16 +429,36 @@ const OwnerDashboardPage = () => {
                     <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Contrato</div>
-                      {(contractStatus[reservation.id] === 'enviado') ? (
-                        <Button size="xs" variant="outline" onClick={() => navigate(`/contrato/${reservation.id}`)}>
-                          <FileText className="mr-2 h-4 w-4" /> Ver contrato
+               
+                    {/* Eliminar 'pendiente' del condicional de aprobar/rechazar para el owner */}
+                    {/* Botones de aprobar/rechazar solo si está en preaprobada_admin */}
+                    {(reservation.status || '').toLowerCase().trim() === 'preaprobada_admin' && (
+                      <div className="flex gap-2 mb-2">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => handleApproveReservation(reservation.id)}>
+                          <CheckCircle className="w-4 h-4 mr-1" /> Aprobar
                         </Button>
-                      ) : (
-                        <span className="text-slate-400 text-sm">Contrato en preparación</span>
-                      )}
-                    </div>
+                        <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => handleRejectReservation(reservation.id)}>
+                          <XCircle className="w-4 h-4 mr-1" /> Rechazar
+                        </Button>
+                      </div>
+                    )}
+                    {/* Botones de pagos y contrato solo si está en aprobada */}
+                    {(reservation.status || '').toLowerCase().trim() === 'aprobada' && (
+                      <>
+                        <div className="text-xs text-slate-500 mb-1">Pagos</div>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors">
+                          <DollarSign className="w-4 h-4 mr-1" /> Ver Pagos
+                        </Button>
+                        <div className="text-xs text-slate-500 mb-1 mt-2">Contrato</div>
+                        {(contractStatus[reservation.id] === 'enviado') ? (
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => navigate(`/contrato/${reservation.id}`)}>
+                            <FileText className="mr-2 h-4 w-4" /> Ver contrato
+                          </Button>
+                        ) : (
+                          <span className="text-slate-400 text-sm">Contrato en preparación</span>
+                        )}
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
