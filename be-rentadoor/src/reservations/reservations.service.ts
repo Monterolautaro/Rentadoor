@@ -182,6 +182,22 @@ export class ReservationsService {
     );
   }
 
+  async addCoEarner(coEarner: {
+    reservation_id: number;
+    full_name: string;
+    dni?: string;
+    cuit_cuil?: string;
+    income_source?: string;
+    employer_name?: string;
+    income_amount?: number;
+  }) {
+    return this.reservationsRepository.addCoEarner(coEarner);
+  }
+
+  async getCoEarnersByReservation(reservation_id: number) {
+    return this.reservationsRepository.getCoEarnersByReservation(reservation_id);
+  }
+
   private async getUserEmailById(userId: number): Promise<string> {
     const { data: user, error } = await this.reservationsRepository['supabaseService'].getClient().from('Users').select('email').eq('id', userId).single();
     if (error || !user) throw new NotFoundException('Usuario no encontrado');
