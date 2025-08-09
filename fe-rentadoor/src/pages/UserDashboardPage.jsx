@@ -26,7 +26,7 @@ const UserDashboardPage = () => {
   const { user } = useAuthContext();
   const navigate = useNavigate();
   const { reservations, loading: loadingReservations, fetchByUser } = useReservations();
-  const { properties, getPropertyById } = useProperties();
+  const { properties, getPropertyById, addProperties } = useProperties();
   const [propertyDetails, setPropertyDetails] = useState(null);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [owners, setOwners] = useState({});
@@ -35,6 +35,7 @@ const UserDashboardPage = () => {
   const [selectedOwner, setSelectedOwner] = useState(null);
   const [ownerLoading, setOwnerLoading] = useState(false);
   const [ownerError, setOwnerError] = useState(null);
+  const [contractStatus, setContractStatus] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,7 +48,7 @@ const UserDashboardPage = () => {
         // Por ahora, datos vacíos hasta implementar endpoints
         setFavorites([]);
         setRecentSearches([]);
-        // Obtener reservas reales del usuario
+    
         if (user) await fetchByUser(user.id);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -109,6 +110,45 @@ const UserDashboardPage = () => {
     };
     if (reservations.length > 0) fetchTitles();
   }, [reservations, getPropertyById]);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      const statuses = {};
+      for (const reservation of reservations) {
+        try {
+          
+          const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/reservations/${reservation.id}`, { credentials: 'include' });
+          const data = await res.json();
+          statuses[reservation.id] = data && data.contract_status ? data.contract_status : null;
+        } catch {
+          statuses[reservation.id] = null;
+        }
+      }
+      setContractStatus(statuses);
+    };
+    if (reservations.length > 0) fetchContracts();
+  }, [reservations]);
+
+  // Sincronizar properties con las propiedades de las reservas
+  useEffect(() => {
+    const syncPropertiesWithReservations = async () => {
+      if (!reservations || reservations.length === 0) return;
+      const propertyIdsNeeded = reservations.map(r => r.property_id);
+      const missingIds = propertyIdsNeeded.filter(
+        id => !properties.some(p => p.id === id)
+      );
+      if (missingIds.length === 0) return;
+      try {
+        const fetchedProperties = await Promise.all(
+          missingIds.map(id => getPropertyById(id))
+        );
+        addProperties(fetchedProperties.filter(Boolean));
+      } catch (err) {
+        // Opcional: mostrar error
+      }
+    };
+    syncPropertiesWithReservations();
+  }, [reservations, properties, getPropertyById, addProperties]);
 
   const handleShowProperty = (propertyId) => {
     navigate(`/propiedad/${propertyId}`);
@@ -289,46 +329,64 @@ const UserDashboardPage = () => {
         <div className="text-center py-8 text-slate-600">No tienes reservas registradas.</div>
       ) : (
         <div className="space-y-6">
-          {reservations.map((reservation) => (
-            <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
-                <div className="flex flex-col md:flex-row md:items-center gap-2">
-                  <span className="font-semibold text-lg text-slate-800">{propertyTitles[reservation.property_id] || '-'}</span>
+          {reservations.map((reservation) => {
+            const property = properties?.find(p => p.id === reservation.property_id);
+            return (
+              <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200 mb-6 rounded-xl">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <span className="font-semibold text-lg text-slate-800">{propertyTitles[reservation.property_id] || '-'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 md:mt-0">
+                    {getReservationStatusBadge(reservation.status)}
+                    <ReservationDetailsModal reservation={reservation} property={property} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-2 md:mt-0">
-                  {getReservationStatusBadge(reservation.status)}
-                  <ReservationDetailsModal reservation={reservation} property={properties?.find(p => p.id === reservation.property_id)} />
-                </div>
-              </div>
-              <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
-                  <div className="font-medium text-slate-700">{(properties?.find(p => p.id === reservation.property_id)?.rental_period || properties?.find(p => p.id === reservation.property_id)?.rentalPeriod || 'N/A')} meses</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Propietario</div>
-                  <Button size="xs" variant="outline" onClick={() => handleShowOwner(reservation.property_id)}>
-                    Ver Propietario
-                  </Button>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
-                  <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Propiedad</div>
-                  <Button size="xs" variant="outline" onClick={() => handleShowProperty(reservation.property_id)}>
-                    Ver detalles
-                  </Button>
-                </div>
-                <div>
-                  <Button size="xs" variant="outline" onClick={() => navigate(`/pagos/${reservation.id}`)}>
-                    Ver pagos
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent className="py-6 px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 items-center">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
+                    <div className="font-medium text-slate-700">{property && property.rental_period ? `${property.rental_period} meses` : 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Propietario</div>
+                    <Button size="xs" variant="outline" onClick={() => handleShowOwner(reservation.property_id)}>
+                      Ver Propietario
+                    </Button>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
+                    <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Propiedad</div>
+                    <Button size="xs" variant="outline" onClick={() => handleShowProperty(reservation.property_id)}>
+                      Ver detalles
+                    </Button>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Pagos</div>
+                    {!(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
+                      <Button size="xs" variant="outline" onClick={() => navigate(`/pagos/${reservation.id}`)}>
+                        Ver pagos
+                      </Button>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Contrato</div>
+                    {!(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') ? (
+                      contractStatus[reservation.id] === 'enviado' ? (
+                        <Button size="xs" variant="outline" onClick={() => navigate(`/contrato/${reservation.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" /> Ver contrato
+                        </Button>
+                      ) : (
+                        <span className="text-slate-400 text-sm">Contrato en preparación</span>
+                      )
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

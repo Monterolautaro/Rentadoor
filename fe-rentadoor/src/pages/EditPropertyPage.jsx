@@ -163,7 +163,7 @@ const EditPropertyPage = () => {
         bathrooms: parseInt(bathrooms),
         garages: parseInt(garages),
         approxM2: parseFloat(approxM2),
-        rentalPeriod: parseInt(rentalPeriod),
+        rental_period: parseInt(rentalPeriod),
         bedrooms: parseInt(environments > 1 ? environments - 1 : 1),
         allImages: allFinalImageUrls,
       };

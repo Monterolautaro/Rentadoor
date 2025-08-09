@@ -23,8 +23,12 @@ export const paymentsService = {
     const res = await axios.post(`${API_URL}/payments/approve`, { reservationId }, { withCredentials: true });
     return res.data;
   },
-  async rejectPayment(reservationId) {
-    const res = await axios.post(`${API_URL}/payments/reject`, { reservationId }, { withCredentials: true });
+  async rejectPayment(reservationId, motivo) {
+    const res = await axios.post(`${API_URL}/payments/reject`, { reservationId, motivo }, { withCredentials: true });
+    return res.data;
+  },
+  async deletePayment(paymentId) {
+    const res = await axios.delete(`${API_URL}/payments/${paymentId}`, { withCredentials: true });
     return res.data;
   },
 }; 

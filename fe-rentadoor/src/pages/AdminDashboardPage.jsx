@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useReservations } from '@/hooks/useReservations';
 import ReservationDetailsModal from '@/components/ReservationDetailsModal';
+import { useRef } from 'react';
 
 const AdminDashboardPage = () => {
   const [verifications, setVerifications] = useState([]);
@@ -40,6 +41,10 @@ const AdminDashboardPage = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [rejectingReservationId, setRejectingReservationId] = useState(null);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [uploadingContract, setUploadingContract] = useState(false);
+  const [selectedReservationId, setSelectedReservationId] = useState(null);
+  const fileInputRef = useRef();
 
   const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
@@ -168,6 +173,30 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const handleOpenContractModal = (reservationId) => {
+    setSelectedReservationId(reservationId);
+    setShowContractModal(true);
+  };
+
+  const handleContractUpload = async (file) => {
+    if (!file || !selectedReservationId) return;
+    setUploadingContract(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('reservationId', selectedReservationId);
+      await axios.post(`${API_URL}/contracts/upload`, formData, { withCredentials: true });
+      toast({ title: 'Contrato enviado', description: 'El contrato fue subido correctamente.' });
+      setShowContractModal(false);
+      setSelectedReservationId(null);
+      await fetchAll();
+    } catch (error) {
+      toast({ title: 'Error', description: 'No se pudo subir el contrato.', variant: 'destructive' });
+    } finally {
+      setUploadingContract(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -231,7 +260,7 @@ const AdminDashboardPage = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-2xl font-bold text-slate-800">-</p>
+              <p className="text-2xl font-bold text-slate-800">{reservations.length}</p>
               <p className="text-sm text-slate-600">Reservas totales</p>
             </div>
           </CardContent>
@@ -465,7 +494,7 @@ const AdminDashboardPage = () => {
           const userObj = users.find(u => u.id === reservation.user_id);
           const ownerObj = users.find(u => u.id === reservation.owner_id);
           return (
-            <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200">
+            <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200 mb-6 rounded-xl">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
                 <div className="flex flex-col md:flex-row md:items-center gap-2">
                   <span className="font-semibold text-lg text-slate-800">{property ? property.title : reservation.property_id}</span>
@@ -476,7 +505,7 @@ const AdminDashboardPage = () => {
                   <ReservationDetailsModal reservation={reservation} property={property} />
                 </div>
               </div>
-              <CardContent className="py-4 px-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="py-6 px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-center text-center">
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Período de Contrato</div>
                   <div className="font-medium text-slate-700">{property?.rental_period || property?.rentalPeriod || 'N/A'} meses</div>
@@ -491,47 +520,31 @@ const AdminDashboardPage = () => {
                   <div className="font-medium text-slate-700">{ownerObj ? `${ownerObj.nombre} (${ownerObj.email})` : reservation.owner_id}</div>
                   <Button size="xs" variant="outline" className="mt-2" onClick={() => { setSelectedOwner(ownerObj); setShowOwnerModal(true); }}>Ver Propietario</Button>
                 </div>
-              </CardContent>
-              <CardContent className="py-2 px-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                  <Button size="sm" variant="outline" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
-                    <Eye className="w-4 h-4 mr-2" /> Ver pagos
-                  </Button>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Ingresos declarados</div>
-                  <div className="font-medium text-slate-700">${reservation.monthly_income?.toLocaleString('es-AR') || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">Documentos</div>
-                  <div className="flex flex-wrap gap-2">
-                    {reservation.income_documents?.length || reservation.additional_documents?.length ? (
-                      <Button size="xs" variant="outline" onClick={() => navigate(`/dashboard/propietario/reserva/${reservation.id}/documentos`)}>
-                        Ver documentos
-                      </Button>
-                    ) : 'No adjuntos'}
-                  </div>
-                </div>
-              </CardContent>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between px-6 pb-4 gap-2 border-t bg-slate-50">
-                <div className="text-xs text-slate-500">Estado actual: {getReservationStatusBadge(reservation.status)}</div>
-                <div className="flex gap-2 items-center mt-2 md:mt-0">
-                  {reservation.status === 'pendiente' && (
+                <div className="flex flex-row gap-2 justify-center items-center">
+                  {reservation.status !== 'rechazada_owner' && reservation.status !== 'rechazada_admin' && (
                     <>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveAsAdmin(reservation.id)}>
-                        <Check className="mr-1 h-4 w-4" /> Aprobar
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleRejectReservation(reservation.id)}>
-                        <X className="mr-1 h-4 w-4" /> Rechazar
-                      </Button>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Pagos</div>
+                        <Button size="xs" variant="outline" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
+                          Ver pagos
+                        </Button>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Contrato</div>
+                        {reservation.contract_status === 'enviado' ? (
+                          <Button size="xs" variant="outline" onClick={() => navigate(`/contrato/${reservation.id}?admin=1`)}>
+                            <FileText className="mr-2 h-4 w-4" /> Ver contrato
+                          </Button>
+                        ) : (
+                          <Button size="xs" variant="outline" onClick={() => handleOpenContractModal(reservation.id)}>
+                            Enviar contrato
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
-                  <Button size="xs" variant="outline" onClick={() => navigate(`/contract/${reservation.id}`)}>
-                    Ver contrato
-                  </Button>
                 </div>
-              </div>
+              </CardContent>
             </Card>
           );
         })}
@@ -683,6 +696,43 @@ const AdminDashboardPage = () => {
               <Button variant="outline" onClick={() => setShowRejectModal(false)}>Cancelar</Button>
               <Button variant="destructive" onClick={confirmRejectReservation} disabled={!rejectNote.trim()}>Rechazar Reserva</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Modal para subir contrato */}
+      <Dialog open={showContractModal} onOpenChange={setShowContractModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Contrato</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center gap-4">
+            <input
+              type="file"
+              accept="application/pdf"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={e => {
+                if (e.target.files && e.target.files[0]) {
+                  handleContractUpload(e.target.files[0]);
+                }
+              }}
+            />
+            <div
+              className="w-full h-32 border-2 border-dashed border-blue-400 rounded flex items-center justify-center cursor-pointer bg-slate-50 hover:bg-blue-50"
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              onDrop={e => {
+                e.preventDefault();
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleContractUpload(e.dataTransfer.files[0]);
+                }
+              }}
+              onDragOver={e => e.preventDefault()}
+            >
+              <span className="text-blue-600 font-semibold">Arrastra y suelta el PDF aquí, o haz click para seleccionar</span>
+            </div>
+            <Button onClick={() => fileInputRef.current && fileInputRef.current.click()} disabled={uploadingContract} className="w-full">
+              Seleccionar archivo
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

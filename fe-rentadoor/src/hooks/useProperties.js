@@ -219,6 +219,16 @@ export const useProperties = () => {
     }
   }, [toast]);
 
+  // Agregar propiedades al array global
+  const addProperties = useCallback((newProps) => {
+    setProperties(prev => {
+      // Evitar duplicados por id
+      const ids = new Set(prev.map(p => p.id));
+      const filtered = newProps.filter(p => p && !ids.has(p.id));
+      return [...prev, ...filtered];
+    });
+  }, []);
+
   return {
     properties,
     loading,
@@ -232,5 +242,6 @@ export const useProperties = () => {
     deleteProperty,
     uploadPropertyImages,
     searchProperties,
+    addProperties,
   };
 }; 

@@ -2,6 +2,9 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { ContractsRepository } from './contracts.repository';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EncryptionService } from '../encryption/encryption.service';
+import { ReservationsRepository } from '../reservations/reservations.repository';
+import { UserService } from '../user/user.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ContractsService {
@@ -9,10 +12,52 @@ export class ContractsService {
     private readonly contractsRepository: ContractsRepository,
     private readonly supabaseService: SupabaseService,
     private readonly encryptionService: EncryptionService,
+    private readonly reservationsRepository: ReservationsRepository,
+    private readonly userService: UserService,
+    private readonly emailService: EmailService,
   ) {}
 
   async uploadContract(file: any, reservationId: number) {
-    return this.contractsRepository.saveContractFile(reservationId, file);
+
+    const contract = await this.contractsRepository.saveContractFile(reservationId, file);
+
+    if(!contract) throw new BadRequestException('Error al guardar el contrato');
+
+    await this.reservationsRepository.update(reservationId, {
+      contract_status: 'enviado',
+      contract_url: contract.file_url,
+    });
+    
+    const reservation = await this.reservationsRepository.findById(reservationId);
+    const tenant = await this.userService.getUserById(reservation.user_id);
+    const owner = await this.userService.getUserById(reservation.owner_id);
+   
+    const contractLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/contrato/${reservationId}`;
+    const subject = 'Nuevo contrato disponible para firmar - Rentadoor';
+
+    const htmlOwner = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e293b;">Tienes un nuevo contrato para firmar</h2>
+      <p>Hola ${owner.nombre}!</p>
+      <p>Ya está disponible el contrato de alquiler para tu reserva. Puedes verlo y firmarlo ingresando al siguiente enlace:</p>
+      <p><a href="${contractLink}" style="color: #2563eb; font-weight: bold;">Ver contrato</a></p>
+      <p>La firma estará habilitada una vez que el inquilino realice el pago de la reserva.</p>
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+      <p style="font-size: 14px; color: #64748b;">Si tienes dudas, puedes responder a este correo.<br>Equipo de Rentadoor</p>
+    </div>`;
+
+    const htmlTenant = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e293b;">Tienes un nuevo contrato para firmar</h2>
+      <p>Hola ${tenant.nombre}!</p>
+      <p>Ya está disponible el contrato de alquiler para tu reserva. Puedes verlo y firmarlo ingresando al siguiente enlace:</p>
+      <p><a href="${contractLink}" style="color: #2563eb; font-weight: bold;">Ver contrato</a></p>
+      <p>Recuerda que la firma estará habilitada una vez que los pagos estén aprobados.</p>
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+      <p style="font-size: 14px; color: #64748b;">Si tienes dudas, puedes responder a este correo.<br>Equipo de Rentadoor</p>
+    </div>`;
+
+    await this.emailService.sendMail(tenant.email, subject, 'Tienes un nuevo contrato para firmar.', htmlTenant);
+    await this.emailService.sendMail(owner.email, subject, 'Tienes un nuevo contrato para firmar.', htmlOwner);
+    return contract;
   }
 
   async getContractByReservation(reservationId: number) {

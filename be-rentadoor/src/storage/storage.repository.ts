@@ -79,4 +79,8 @@ export class StorageRepository {
 
         if (error) throw new Error(`Delete failed: ${error.message}`);
     }
+
+    getClient() {
+        return this.supabaseService.getClient();
+    }
 }

@@ -26,4 +26,12 @@ export class UpdateReservationDto extends PartialType(CreateReservationDto) {
   @IsOptional()
   @IsString()
   cancellation_reason?: string;
+
+  @IsOptional()
+  @IsString()
+  contract_status?: string;
+
+  @IsOptional()
+  @IsString()
+  contract_url?: string;
 } 
