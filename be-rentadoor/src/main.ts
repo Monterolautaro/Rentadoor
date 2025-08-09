@@ -4,13 +4,14 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import 'dotenv/config';
 import * as bodyParser from 'body-parser';
+import { json, urlencoded } from 'express';
 
 const allowedOrigins = process.env.URL_FRONT?.split(',') || ['http://localhost:5173', 'http://localhost:3000', 'https://rentadoor.vercel.app/'];
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Configurar cookie-parser
+  
   app.use(cookieParser());
   
   app.enableCors({
@@ -21,10 +22,14 @@ async function bootstrap() {
     exposedHeaders: ['Set-Cookie'],
   });
 
+ 
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ limit: '10mb', extended: true }));
 
-  app.use('/api/docusign/webhook', bodyParser.raw({ type: '*/*' }));
+ 
+  app.use('/api/docusign/webhook', bodyParser.raw({ type: '*/*', limit: '10mb' }));
 
-  // Middleware para exponer rawBody en req 
+
   app.use((req: any, res, next) => {
     if (req.originalUrl && req.originalUrl.includes('/api/docusign/webhook')) {
       req.rawBody = req.body; 
