@@ -33,23 +33,29 @@ export class DocuSignController {
   @Post('webhook')
   async docusignWebhook(@Body() body: any) {
     try {
-      const envelopeId = body.envelopeId || body.envelope_id;
-      const status = body.status || body.envelopeStatus;
+
+      const data = body.data || {};
+      const envelopeId = body.envelopeId || body.envelope_id || data.envelopeId || data.envelope_id;
+      const event = body.event || data.event;
+      const envelopeSummary = data.envelopeSummary || {};
+      const status = envelopeSummary.status || data.status;
 
       const supabase = this.contractsRepository['supabaseService'].getClient();
       const { data: contract } = await supabase.from('contracts').select('*').eq('envelope_id', envelopeId).single();
       if (!contract) return { ok: false };
+      await this.contractsRepository.updateSignatureFields(contract.reservation_id, {
+        signature_status: status,
+      });
+      // Si el envelope está completado, descargar y guardar el PDF firmado
       if (status === 'completed') {
-  
         const out = `/tmp/${envelopeId}.pdf`;
         await this.ds.downloadCombinedDocument(envelopeId, out);
-      
         const signedPdfUrl = await this.ds.handleSignedContract(contract.reservation_id, envelopeId, out);
         await this.contractsRepository.updateSignatureFields(contract.reservation_id, {
           signature_status: 'completed',
           signed_pdf_url: signedPdfUrl,
         });
-      
+    
         const { data: reservation } = await supabase.from('reservations').select('*').eq('id', contract.reservation_id).single();
         if (reservation) {
           const { data: tenant } = await supabase.from('Users').select('email,nombre,name').eq('id', reservation.user_id).single();
@@ -59,14 +65,11 @@ export class DocuSignController {
           if (tenant?.email) await emailService.sendMail(tenant.email, 'Contrato firmado', 'El contrato ha sido firmado por ambas partes.', html);
           if (owner?.email) await emailService.sendMail(owner.email, 'Contrato firmado', 'El contrato ha sido firmado por ambas partes.', html);
         }
-      } else {
-        await this.contractsRepository.updateSignatureFields(contract.reservation_id, {
-          signature_status: status,
-        });
       }
       return { ok: true };
     } catch (err) {
-      this.logger.error('Error en webhook de DocuSign', err);
+      this.logger.error('Error en webhook de DocuSign');
+      this.logger.error(err);
       return { ok: false, error: err?.message };
     }
   }

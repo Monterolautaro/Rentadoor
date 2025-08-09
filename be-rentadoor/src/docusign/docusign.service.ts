@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as docusign from 'docusign-esign';
-import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import axios from 'axios';
 import { ContractsRepository } from '../contracts/contracts.repository';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class DocusignService {
@@ -18,7 +18,8 @@ export class DocusignService {
   private oauthBase = process.env.DOCUSIGN_OAUTH_BASE || 'account-d.docusign.com';
 
   constructor(
-    private readonly contractsRepository: ContractsRepository
+    private readonly contractsRepository: ContractsRepository,
+    private readonly supabaseService: SupabaseService
   ) {
     this.apiClient = new docusign.ApiClient();
     this.apiClient.setBasePath(this.basePath);
@@ -50,7 +51,6 @@ export class DocusignService {
     return accessToken;
   }
 
-  /** Convierte PDF en URL (lee desde tu storage público) a base64 */
   private async getBase64FromUrl(url: string) {
     const resp = await axios.get(url, { responseType: 'arraybuffer' });
     return Buffer.from(resp.data).toString('base64');
@@ -68,23 +68,43 @@ export class DocusignService {
     if (!contract || !contract.file_url) throw new Error('Contrato no encontrado para la reserva');
     const fileUrl = contract.file_url;
 
+    // Buscar la reserva y los usuarios
+    const supabase = this.supabaseService.getClient();
+    const { data: reservation, error: reservationError } = await supabase
+      .from('reservations')
+      .select('*')
+      .eq('id', reservationId)
+      .single();
+    if (reservationError || !reservation) throw new Error('Reserva no encontrada');
+    const { data: tenant } = await supabase.from('Users').select('email,nombre,name').eq('id', reservation.user_id).single();
+    const { data: owner } = await supabase.from('Users').select('email,nombre,name').eq('id', reservation.owner_id).single();
+    if (!tenant || !owner) throw new Error('No se encontraron los usuarios firmantes');
+
+    // Crear ambos firmantes
+    const bothSigners = [
+      {
+        name: tenant.nombre || tenant.name,
+        email: tenant.email,
+        clientUserId: 'tenant-' + reservation.user_id,
+        recipientId: '1',
+        routingOrder: '1',
+      },
+      {
+        name: owner.nombre || owner.name,
+        email: owner.email,
+        clientUserId: 'owner-' + reservation.owner_id,
+        recipientId: '2',
+        routingOrder: '2',
+      }
+    ];
+
     // Descargar el PDF desde Supabase Storage
-    const supabase = this.contractsRepository['supabaseService'].getClient();
     const { data, error } = await supabase.storage
       .from('contracts')
       .download(fileUrl);
     if (error) throw new Error('Error descargando contrato desde storage: ' + error.message);
     const buffer = Buffer.from(await data.arrayBuffer());
     const documentBase64 = buffer.toString('base64');
-
-    // Asegurá clientUserId para embedded signing
-    const signedSigners = signers.map((s, idx) => ({
-      name: s.name,
-      email: s.email,
-      recipientId: (idx + 1).toString(),
-      routingOrder: (idx + 1).toString(),
-      clientUserId: s.clientUserId || uuidv4(),
-    }));
 
     const envelopeDefinition: any = {
       emailSubject: 'Por favor firme el contrato - Rentadoor',
@@ -97,13 +117,7 @@ export class DocusignService {
         },
       ],
       recipients: {
-        signers: signedSigners.map(s => ({
-          email: s.email,
-          name: s.name,
-          recipientId: s.recipientId,
-          routingOrder: s.routingOrder,
-          clientUserId: s.clientUserId,
-        })),
+        signers: bothSigners,
       },
       status: 'sent',
       eventNotification: {
@@ -138,12 +152,12 @@ export class DocusignService {
     // Guardar en contracts
     await this.contractsRepository.updateSignatureFields(reservationId, {
       envelope_id: result.envelopeId,
-      tenant_client_user_id: signedSigners[0]?.clientUserId,
-      owner_client_user_id: signedSigners[1]?.clientUserId,
+      tenant_client_user_id: bothSigners[0]?.clientUserId,
+      owner_client_user_id: bothSigners[1]?.clientUserId,
       signature_status: 'pending',
     });
 
-    return { envelopeId: result.envelopeId, signers: signedSigners };
+    return { envelopeId: result.envelopeId, signers: bothSigners };
   }
 
   /**
