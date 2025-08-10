@@ -10,6 +10,7 @@ import { useProperties } from '@/hooks/useProperties';
 import { useReservations } from '@/hooks/useReservations';
 import ImageZoomModal from '@/components/ImageZoomModal';
 import HigherImage from '@/components/HigherImage';
+import { userService } from '../services/userServce';
 
 const PropertyDetailPage = () => {
   const { propertyId } = useParams();
@@ -80,11 +81,13 @@ const PropertyDetailPage = () => {
     // eslint-disable-next-line
   }, [user, propertyId]);
 
-  const handleContactOwner = () => {
-    toast({
-      title: "🚧 Contactar al Propietario",
-      description: "Esta función aún no está implementada. ¡Pronto podrás comunicarte directamente!",
-    });
+  const handleContactOwner = async () => {
+    const user = property.owner_id
+    const userData = await userService.getUserById(user);
+    const phone = userData.telefono;
+    console.log(phone);
+    
+    window.open(`https://wa.me/${phone}`, '_blank');
   };
 
   const handleReserve = () => {
@@ -272,7 +275,7 @@ const PropertyDetailPage = () => {
                   </p>
                   {property.expense_price > 0 && (
                     <p className="text-sm text-slate-500 mb-2">
-                      + ${property.expense_price.toLocaleString('es-AR')} de expensas (ARS)
+                      + ${property.expense_price.toLocaleString('es-AR')} de expensas ({property.currency})
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -319,7 +322,6 @@ const PropertyDetailPage = () => {
                   <div className="border-t border-slate-200 mt-4 pt-4 grid grid-cols-2 gap-2 text-xs text-slate-500">
                     <span>Estado: {property.status}</span>
                     <span>Moneda: {property.currency}</span>
-                    {property.rating && <span>Calificación: {property.rating}/5</span>}
                     <span>Publicado: {new Date(property.created_at).toLocaleDateString('es-AR')}</span>
                   </div>
                 </div>

@@ -49,7 +49,7 @@ export class UserController {
     }
 
     @Get(':id')
-    @RolesDecorator(Roles.ADMIN)
+    @RolesDecorator(Roles.ADMIN, Roles.USER)
     @UseGuards(AuthGuard, RolesGuard)
     async getUser(@Param('id') id: number) {
         return this.userService.getUserById(id);

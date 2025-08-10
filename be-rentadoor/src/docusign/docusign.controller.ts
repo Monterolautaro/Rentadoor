@@ -9,9 +9,9 @@ export class DocuSignController {
 
 
   @Post('envelopes')
-  async createEnvelope(@Body() body: { reservationId: number; signers: Array<{ name: string; email: string }> }) {
-    const { reservationId, signers } = body;
-    const response = await this.ds.createEnvelope(signers, reservationId);
+  async createEnvelope(@Body() body: { reservationId: number }) {
+    const { reservationId } = body;
+    const response = await this.ds.createEnvelope(reservationId);
     return response;
   }
 
@@ -25,6 +25,7 @@ export class DocuSignController {
   @Post('envelopes/:envelopeId/recipient-view')
   async createRecipientView(@Param('envelopeId') envelopeId: string, @Body() body: { signer: { name: string; email: string; clientUserId: string }; returnUrl: string }) {
     const { signer, returnUrl } = body;
+
     const url = await this.ds.createRecipientView(envelopeId, signer, returnUrl);
     return { url };
   }
@@ -33,20 +34,22 @@ export class DocuSignController {
   @Post('webhook')
   async docusignWebhook(@Body() body: any) {
     try {
-
-      const data = body.data || {};
-      const envelopeId = body.envelopeId || body.envelope_id || data.envelopeId || data.envelope_id;
-      const event = body.event || data.event;
+        
+      const data = body.data;
+      const envelopeId = data.envelopeId;
+      const event = body.event;
       const envelopeSummary = data.envelopeSummary || {};
-      const status = envelopeSummary.status || data.status;
+      const status = envelopeSummary.status;
 
       const supabase = this.contractsRepository['supabaseService'].getClient();
+
       const { data: contract } = await supabase.from('contracts').select('*').eq('envelope_id', envelopeId).single();
+
       if (!contract) return { ok: false };
       await this.contractsRepository.updateSignatureFields(contract.reservation_id, {
         signature_status: status,
       });
-      // Si el envelope está completado, descargar y guardar el PDF firmado
+
       if (status === 'completed') {
         const out = `/tmp/${envelopeId}.pdf`;
         await this.ds.downloadCombinedDocument(envelopeId, out);

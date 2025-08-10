@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { User, Briefcase, Users, DollarSign, Calendar, Mail, Phone, Hash } from 'lucide-react';
 import { reservationsService } from '@/services/reservationsService';
 import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const ReservationDetailsModal = ({ reservation, property }) => {
   const [coEarners, setCoEarners] = useState([]);
   const [coEarnersLoaded, setCoEarnersLoaded] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+
 
   if (!reservation) return null;
 
@@ -88,14 +91,16 @@ const ReservationDetailsModal = ({ reservation, property }) => {
           )}
         </div>
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            className="mr-auto"
-            onClick={() => navigate(`/dashboard/propietario/reserva/${reservation.id}/documentos`)}
-          >
-            Ver documentos
-          </Button>
+          {user && reservation.owner_id === user.id && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mr-auto"
+              onClick={() => navigate(`/dashboard/propietario/reserva/${reservation.id}/documentos`)}
+            >
+              Ver documentos
+            </Button>
+          )}
           <DialogClose asChild>
             <Button type="button" variant="secondary">Cerrar</Button>
           </DialogClose>

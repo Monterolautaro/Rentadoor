@@ -68,14 +68,12 @@ const ContractViewPage = () => {
     setSignError('');
     setSignSuccess(false);
     try {
-      const signers = [
-        { name: user.nombre || user.name, email: user.email },
-      ];
+
       const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/api/docusign/envelopes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ reservationId: contractId, signers }),
+        body: JSON.stringify({ reservationId: contractId }),
       });
       if (!res.ok) throw new Error('No se pudo iniciar la firma.');
       const data = await res.json();

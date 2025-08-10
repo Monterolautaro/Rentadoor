@@ -57,7 +57,7 @@ export class DocusignService {
   }
 
   
-  async createEnvelope(signers: Array<{ name: string; email: string; clientUserId?: string }>, reservationId: number) {
+  async createEnvelope(reservationId: number) {
     const accessToken = await this.getAccessToken();
     this.apiClient.addDefaultHeader('Authorization', `Bearer ${accessToken}`);
 
@@ -65,40 +65,43 @@ export class DocusignService {
 
     // Buscar el contrato por reservationId y obtener el file_url
     const contract = await this.contractsRepository.getContractByReservation(reservationId);
+
     if (!contract || !contract.file_url) throw new Error('Contrato no encontrado para la reserva');
     const fileUrl = contract.file_url;
 
-    // Buscar la reserva y los usuarios
     const supabase = this.supabaseService.getClient();
     const { data: reservation, error: reservationError } = await supabase
       .from('reservations')
       .select('*')
       .eq('id', reservationId)
       .single();
+
     if (reservationError || !reservation) throw new Error('Reserva no encontrada');
-    const { data: tenant } = await supabase.from('Users').select('email,nombre,name').eq('id', reservation.user_id).single();
-    const { data: owner } = await supabase.from('Users').select('email,nombre,name').eq('id', reservation.owner_id).single();
+
+    const { data: tenant } = await supabase.from('Users').select('email,nombre').eq('id', reservation.user_id).single();
+    
+    const { data: owner } = await supabase.from('Users').select('email,nombre').eq('id', reservation.owner_id).single();
+    
     if (!tenant || !owner) throw new Error('No se encontraron los usuarios firmantes');
 
-    // Crear ambos firmantes
+    
     const bothSigners = [
       {
-        name: tenant.nombre || tenant.name,
+        name: tenant.nombre,
         email: tenant.email,
-        clientUserId: 'tenant-' + reservation.user_id,
+        clientUserId: reservation.user_id,
         recipientId: '1',
         routingOrder: '1',
       },
       {
-        name: owner.nombre || owner.name,
+        name: owner.nombre,
         email: owner.email,
-        clientUserId: 'owner-' + reservation.owner_id,
+        clientUserId: reservation.owner_id,
         recipientId: '2',
         routingOrder: '2',
       }
     ];
 
-    // Descargar el PDF desde Supabase Storage
     const { data, error } = await supabase.storage
       .from('contracts')
       .download(fileUrl);
@@ -149,7 +152,6 @@ export class DocusignService {
 
     const result = await envelopesApi.createEnvelope(this.accountId, { envelopeDefinition });
 
-    // Guardar en contracts
     await this.contractsRepository.updateSignatureFields(reservationId, {
       envelope_id: result.envelopeId,
       tenant_client_user_id: bothSigners[0]?.clientUserId,
@@ -160,10 +162,7 @@ export class DocusignService {
     return { envelopeId: result.envelopeId, signers: bothSigners };
   }
 
-  /**
-   * Obtiene recipient view (URL de firma embebida) para un signer ya incluido en el envelope.
-   * returnUrl: a dónde vuelve el usuario después de firmar (tu app)
-   */
+ 
   async createRecipientView(envelopeId: string, signer: { name: string; email: string; clientUserId: string }, returnUrl: string) {
     const accessToken = await this.getAccessToken();
     this.apiClient.addDefaultHeader('Authorization', `Bearer ${accessToken}`);
@@ -174,21 +173,25 @@ export class DocusignService {
       authenticationMethod: 'none',
       email: signer.email,
       userName: signer.name,
-      clientUserId: signer.clientUserId,
+      clientUserId: 'owner-' +signer.clientUserId,
     });
 
+    if(!viewRequest) throw new Error('Error al crear la vista de firma');
+
     const response = await envelopesApi.createRecipientView(this.accountId, envelopeId, { recipientViewRequest: viewRequest });
+
+    if(!response) throw new Error('No se pudo crear la vista de firma');
+
     return response.url;
   }
 
-  /** Descarga documento combinado (todos los documentos) y lo guarda en path */
   async downloadCombinedDocument(envelopeId: string, outputPath: string) {
     const accessToken = await this.getAccessToken();
     this.apiClient.addDefaultHeader('Authorization', `Bearer ${accessToken}`);
     const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
 
     const result = await envelopesApi.getDocument(this.accountId, envelopeId, 'combined');
-    // result es un buffer binario (en SDK puede venir como string/Buffer)
+   
     fs.writeFileSync(outputPath, Buffer.from(result, 'binary'));
     return outputPath;
   }
