@@ -523,7 +523,7 @@ const AdminDashboardPage = () => {
                   <Button size="xs" variant="outline" className="mt-2" onClick={() => { setSelectedOwner(ownerObj); setShowOwnerModal(true); }}>Ver Propietario</Button>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {status === 'pendiente' && reservation.payment_status === 'aprobado' && (
+                  {status === 'pendiente' && (
                     <div className="flex gap-2 mb-2">
                       <Button
                         size="sm"
@@ -545,18 +545,18 @@ const AdminDashboardPage = () => {
                     <>
                       <div>
                         <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
+                        <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
                           <DollarSign className="w-4 h-4 mr-1" /> Ver pagos
                         </Button>
                       </div>
                       <div>
                         <div className="text-xs text-slate-500 mb-1">Contrato</div>
                         {reservation.contract_status === 'enviado' ? (
-                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => navigate(`/contrato/${reservation.id}?admin=1`)}>
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/contrato/${reservation.id}?admin=1`)}>
                             <FileText className="mr-2 h-4 w-4" /> Ver contrato
                           </Button>
                         ) : (
-                          <Button size="sm" className="bg-slate-600 hover:bg-slate-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => handleOpenContractModal(reservation.id)}>
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => handleOpenContractModal(reservation.id)}>
                             <FileText className="mr-2 h-4 w-4" /> Enviar contrato
                           </Button>
                         )}

@@ -99,7 +99,6 @@ export const useAuth = () => {
     }
   }, []);
 
-  // Verificar email
   const checkEmailVerification = useCallback(async () => {
     if (!user) return;
 

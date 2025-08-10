@@ -441,10 +441,10 @@ const OwnerDashboardPage = () => {
                    
                     {(reservation.status || '').toLowerCase().trim() === 'aprobada' && (
                       <>
-                        <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                        <Button size="sm" variant="outline" className="mt-2">
+                        {/* <div className="text-xs text-slate-500 mb-1">Pagos</div> */}
+                        {/* <Button size="sm" variant="outline" className="mt-2">
                           <DollarSign className="w-4 h-4 mr-1" /> Ver Pagos
-                        </Button>
+                        </Button> */}
                         <div className="text-xs text-slate-500 mb-1 mt-2">Contrato</div>
                         {(contractStatus[reservation.id] === 'enviado') ? (
                           <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/contrato/${reservation.id}`)}>

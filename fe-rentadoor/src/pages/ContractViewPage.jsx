@@ -19,6 +19,7 @@ const ContractViewPage = () => {
   const isAdminView = location.search.includes('admin=1');
   const { user } = useAuthContext();
   const [contractInfo, setContractInfo] = useState(null);
+  const [reservation, setReservation] = useState(null);
 
   useEffect(() => {
     const fetchContract = async () => {
@@ -59,9 +60,19 @@ const ContractViewPage = () => {
         setContractInfo(null);
       }
     };
+    const fetchReservation = async () => {
+      try {
+        const res = await fetch(`${API_URL}/reservations/${contractId}`, { credentials: 'include' });
+        const data = await res.json();
+        setReservation(data);
+      } catch {
+        setReservation(null);
+      }
+    };
     fetchContract();
     fetchPayments();
     fetchContractInfo();
+    fetchReservation()
   }, [contractId, location.search]);
 
   const handleDownload = () => {
@@ -143,7 +154,7 @@ const ContractViewPage = () => {
             </Button>
             {!isAdminView && (
               <Button
-              disabled={contractInfo?.owner_client_user_id == user.id}
+              disabled={reservation?.owner_id == user.id}
               variant="outline" size="sm" onClick={() => navigate(`/pagos/${contractId}`)} className="flex-1 min-w-[100px] py-2">
                 <FileText className="mr-2 h-4 w-4" /> Pagos
               </Button>
@@ -163,7 +174,6 @@ const ContractViewPage = () => {
                   contractInfo && contractInfo?.signature_status === 'completed' ? 'Ver contrato firmado'
                   : contractInfo && contractInfo?.signature_status === 'sent' && user && contractInfo?.tenant_client_user_id == user.id ? 'Ver contrato firmado'
                   : 'Firmar Contrato'}
-                  {console.log(contractInfo)}
               </Button>
             )}
           </div>

@@ -88,8 +88,7 @@ export class AuthService {
         };
 
         const token = this.jwtService.sign(payload);
-        
-        // Enviar email de verificación
+    
         try {
             const verificationToken = this.jwtService.sign(
                 { email, type: 'email_verification' },
