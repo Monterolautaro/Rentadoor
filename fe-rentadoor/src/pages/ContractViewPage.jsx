@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText, PenTool, ChevronLeft, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
+
 const ContractViewPage = () => {
   const { contractId } = useParams();
   const [contractBase64, setContractBase64] = useState(null);
@@ -16,13 +18,13 @@ const ContractViewPage = () => {
   const location = useLocation();
   const isAdminView = location.search.includes('admin=1');
   const { user } = useAuthContext();
+  const [contractInfo, setContractInfo] = useState(null);
 
   useEffect(() => {
     const fetchContract = async () => {
       setLoading(true);
       try {
-        // Obtener el PDF en base64 desde el nuevo endpoint
-        const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/contracts/download-pdf/${contractId}`, { credentials: 'include' });
+        const res = await fetch(`${API_URL}/contracts/download-pdf/${contractId}`, { credentials: 'include' });
         const data = await res.json();
         if (data && data.base64) {
           setContractBase64(data.base64);
@@ -37,7 +39,7 @@ const ContractViewPage = () => {
     };
     const fetchPayments = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/payments/by-reservation/${contractId}`, { credentials: 'include' });
+        const res = await fetch(`${API_URL}/payments/by-reservation/${contractId}`, { credentials: 'include' });
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           setPaymentStatus(data[0].status || 'pendiente');
@@ -48,9 +50,19 @@ const ContractViewPage = () => {
         setPaymentStatus('pendiente');
       }
     };
+    const fetchContractInfo = async () => {
+      try {
+        const res = await fetch(`${API_URL}/contracts/by-reservation/${contractId}`, { credentials: 'include' });
+        const data = await res.json();
+        setContractInfo(data);
+      } catch {
+        setContractInfo(null);
+      }
+    };
     fetchContract();
     fetchPayments();
-  }, [contractId]);
+    fetchContractInfo();
+  }, [contractId, location.search]);
 
   const handleDownload = () => {
     if (contractBase64) {
@@ -69,7 +81,7 @@ const ContractViewPage = () => {
     setSignSuccess(false);
     try {
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/api/docusign/envelopes`, {
+      const res = await fetch(`${API_URL}/api/docusign/envelopes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -81,22 +93,27 @@ const ContractViewPage = () => {
       const signer = data.signers.find(s => s.email === user.email);
       if (!signer) throw new Error('No se encontró el firmante.');
       const returnUrl = `${window.location.origin}/contrato/${contractId}?signed=1`;
-      const res2 = await fetch(`${import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000'}/api/docusign/envelopes/${envelopeId}/recipient-view`, {
+      const res2 = await fetch(`${API_URL}/api/docusign/envelopes/${envelopeId}/recipient-view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ signer, returnUrl }),
       });
-      if (!res2.ok) throw new Error('No se pudo obtener la URL de firma.');
+      if (!res2.ok) throw new Error();
       const data2 = await res2.json();
       if (data2.url) {
         setSigning(false);
         window.location.href = data2.url;
       } else {
-        throw new Error('No se pudo obtener la URL de firma.');
+        throw new Error();
       }
     } catch (err) {
-      setSignError(err?.message || 'Error iniciando la firma digital.');
+      
+      if (err?.message?.includes('RECIPIENT_NOT_IN_SEQUENCE')) {
+        setSignError('Aún no puedes firmar. Debes esperar a que el otro firmante complete su parte.');
+      } else {
+        setSignError(err?.message || 'Error iniciando la firma digital.');
+      }
       setSigning(false);
     }
   };
@@ -125,7 +142,9 @@ const ContractViewPage = () => {
               <Download className="mr-2 h-4 w-4" /> Descargar
             </Button>
             {!isAdminView && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/pagos/${contractId}`)} className="flex-1 min-w-[100px] py-2">
+              <Button
+              disabled={contractInfo?.owner_client_user_id == user.id}
+              variant="outline" size="sm" onClick={() => navigate(`/pagos/${contractId}`)} className="flex-1 min-w-[100px] py-2">
                 <FileText className="mr-2 h-4 w-4" /> Pagos
               </Button>
             )}
@@ -133,19 +152,33 @@ const ContractViewPage = () => {
               <Button
                 className="bg-blue-600 hover:bg-blue-500 flex-1 min-w-[100px] py-2 text-white"
                 size="sm"
-                disabled={paymentStatus !== 'aprobado' || !contractBase64 || signing}
+                disabled={
+                paymentStatus !== 'aprobado' ||
+                 (contractInfo?.signature_status === 'pending' && contractInfo?.owner_client_user_id == user.id)
+                }
                 onClick={handleSignContract}
               >
                 {signing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenTool className="mr-2 h-4 w-4" />}
-                {signing ? 'Redirigiendo...' : 'Firmar Contrato'}
+                {signing ? 'Redirigiendo...' :
+                  contractInfo && contractInfo?.signature_status === 'completed' ? 'Ver contrato firmado'
+                  : contractInfo && contractInfo?.signature_status === 'sent' && user && contractInfo?.tenant_client_user_id == user.id ? 'Ver contrato firmado'
+                  : 'Firmar Contrato'}
+                  {console.log(contractInfo)}
               </Button>
             )}
           </div>
-          {!isAdminView && paymentStatus !== 'aprobado' && (
+          {!isAdminView && paymentStatus !== 'aprobado' && contractInfo?.tenant_client_user_id == user.id &&(
             <div className="mt-4 text-sm text-red-600 text-center w-full">
               Para firmar el contrato, primero debes completar y tener aprobados todos los pagos requeridos.
             </div>
           )}
+          {
+            contractInfo?.signature_status === 'pending' && contractInfo?.owner_client_user_id == user.id && (
+              <div className="mt-4 text-sm text-red-600 text-center w-full">
+              Para poder firmar, debes esperar a que el inquilino realice primero su firma.
+            </div>
+            )
+          }
           {isAdminView && (
             <div className="mt-4 flex justify-center w-full">
               <Button variant="outline" onClick={() => navigate(`/admin/pagos/${contractId}`)}>

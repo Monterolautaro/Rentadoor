@@ -28,7 +28,6 @@ const PropertyDetailPage = () => {
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImageSrc, setZoomImageSrc] = useState(null);
 
-  // Normalizar las imágenes para mostrar
   const imagesToShow = property?.all_images && property.all_images.length > 0 
     ? property.all_images 
     : (property?.image ? [property.image] : ["https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80"]);
@@ -78,15 +77,24 @@ const PropertyDetailPage = () => {
       }
     };
     checkReservation();
-    // eslint-disable-next-line
+ 
   }, [user, propertyId]);
 
   const handleContactOwner = async () => {
-    const user = property.owner_id
-    const userData = await userService.getUserById(user);
-    const phone = userData.telefono;
-    console.log(phone);
+    if(user?.identityVerificationStatus !== 'verified'){
+      toast({
+        title: "Verificación Requerida",
+        description: "Debes verificar tu identidad para poder contactar al propietario.",
+        variant: "destructive",
+      });
+      return;
+    }
+ 
+    const owner = property.owner_id
+    const userData = await userService.getUserById(owner);
     
+
+    const phone = userData.telefono;
     window.open(`https://wa.me/${phone}`, '_blank');
   };
 
@@ -299,7 +307,9 @@ const PropertyDetailPage = () => {
                       </>
                     ) : (
                       <>
-                        <Button className="w-full bg-slate-700 hover:bg-slate-600" onClick={handleContactOwner}>
+                        <Button
+                        disabled={user?.identityVerificationStatus === 'not_verified'}
+                        className="w-full bg-slate-700 hover:bg-slate-600" onClick={handleContactOwner}>
                           <MessageSquare className="mr-2 h-5 w-5" /> Contactar al Propietario
                         </Button>
                         <Button variant="outline" className="w-full text-slate-700 hover:text-slate-900" onClick={() => toast({title: "🚧 Próximamente", description: "Podrás guardar esta propiedad en tus favoritos."})}>

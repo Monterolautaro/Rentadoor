@@ -107,8 +107,6 @@ const ReservationDocumentsPage = () => {
             <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
               <FileText className="h-6 w-6 text-blue-600" /> Documentos de la Reserva
             </CardTitle>
-            <Badge className="bg-blue-100 text-blue-800">Reserva #{reservation.id}</Badge>
-            <div className="text-slate-600 text-sm">Propiedad: <span className="font-semibold">{reservation.property_title || reservation.property_id}</span></div>
             <div className="text-slate-600 text-sm">Inquilino: <span className="font-semibold">{reservation.main_applicant_name}</span></div>
             <div className="text-slate-600 text-xs flex items-center gap-1 mt-2"><Shield className="h-4 w-4 text-yellow-500" /> <span>Documentos confidenciales. Solo para uso de validación.</span></div>
           </CardHeader>

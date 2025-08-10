@@ -201,13 +201,12 @@ const OwnerDashboardPage = () => {
           <CardContent>
             <div className="space-y-2">
               <p className="text-2xl font-bold text-slate-800">
-                {/* TODO: Implementar endpoint para reservas */}
-                -
-              </p>
-              <p className="text-sm text-slate-600">
-                Reservas confirmadas
+                {reservations.length}
               </p>
             </div>
+            <p className="text-sm text-slate-600">
+                Reservas confirmadas
+              </p>
           </CardContent>
         </Card>
 
@@ -221,8 +220,7 @@ const OwnerDashboardPage = () => {
           <CardContent>
             <div className="space-y-2">
               <p className="text-2xl font-bold text-slate-800">
-                {/* TODO: Implementar endpoint para inquilinos */}
-                -
+                {reservations.filter(r => r.status === 'aprobada').length}
               </p>
               <p className="text-sm text-slate-600">
                 Inquilinos activos
@@ -420,7 +418,7 @@ const OwnerDashboardPage = () => {
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Inquilino</div>
                     <div className="font-medium text-slate-700">{reservation.main_applicant_name || reservation.user_id}</div>
-                    <Button size="xs" variant="outline" className="mt-2" onClick={() => handleShowTenant(reservation)}>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => handleShowTenant(reservation)}>
                       Ver Inquilino
                     </Button>
                   </div>
@@ -430,8 +428,6 @@ const OwnerDashboardPage = () => {
                   </div>
                   <div className="flex flex-col gap-2">
                
-                    {/* Eliminar 'pendiente' del condicional de aprobar/rechazar para el owner */}
-                    {/* Botones de aprobar/rechazar solo si está en preaprobada_admin */}
                     {(reservation.status || '').toLowerCase().trim() === 'preaprobada_admin' && (
                       <div className="flex gap-2 mb-2">
                         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => handleApproveReservation(reservation.id)}>
@@ -442,16 +438,16 @@ const OwnerDashboardPage = () => {
                         </Button>
                       </div>
                     )}
-                    {/* Botones de pagos y contrato solo si está en aprobada */}
+                   
                     {(reservation.status || '').toLowerCase().trim() === 'aprobada' && (
                       <>
                         <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors">
+                        <Button size="sm" variant="outline" className="mt-2">
                           <DollarSign className="w-4 h-4 mr-1" /> Ver Pagos
                         </Button>
                         <div className="text-xs text-slate-500 mb-1 mt-2">Contrato</div>
                         {(contractStatus[reservation.id] === 'enviado') ? (
-                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors" onClick={() => navigate(`/contrato/${reservation.id}`)}>
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/contrato/${reservation.id}`)}>
                             <FileText className="mr-2 h-4 w-4" /> Ver contrato
                           </Button>
                         ) : (
