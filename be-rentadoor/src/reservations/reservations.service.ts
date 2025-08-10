@@ -13,12 +13,23 @@ export class ReservationsService {
     private readonly reservationsRepository: ReservationsRepository,
     private readonly storageService: StorageService,
     private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
   async create(createDto: CreateReservationDto, userId: number): Promise<IReservation> {
     if (createDto.user_id !== userId) {
       throw new ForbiddenException('No puedes crear reservas para otro usuario');
     }
+
+    const adminEmails = await this.emailService.getAdminEmails();
+    for (const email of adminEmails) {
+      await this.emailService.sendMail(
+        email,
+        'Nueva reserva creada',
+        'Se ha creado una nueva reserva en la plataforma.',
+        `<p>Se ha creado una nueva reserva. Revisa el panel de administración para más detalles.</p>`
+      );
+    }
+
     return this.reservationsRepository.create(createDto);
   }
 
@@ -149,13 +160,13 @@ export class ReservationsService {
   }
 
   async uploadDocument(file: Multer.File, userId: number): Promise<string> {
- 
+
     return this.storageService.uploadEncryptedFile(
       file.buffer,
       userId,
       file.originalname,
-      'reservations-docs', 
-      'encrypted_files' 
+      'reservations-docs',
+      'encrypted_files'
     );
   }
 

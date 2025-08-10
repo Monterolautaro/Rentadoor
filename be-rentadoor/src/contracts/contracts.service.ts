@@ -32,7 +32,7 @@ export class ContractsService {
     const tenant = await this.userService.getUserById(reservation.user_id);
     const owner = await this.userService.getUserById(reservation.owner_id);
    
-    const contractLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/contrato/${reservationId}`;
+    const contractLink = `${process.env.URL_FRONT}/contrato/${reservationId}`;
     const subject = 'Nuevo contrato disponible para firmar - Rentadoor';
 
     const htmlOwner = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

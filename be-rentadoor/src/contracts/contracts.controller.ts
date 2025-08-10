@@ -23,6 +23,7 @@ export class ContractsController {
 
   @Get('by-reservation/:reservationId')
   @UseGuards(AuthGuard, RolesGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
   async getContractByReservation(@Param('reservationId') reservationId: number) {
     return this.contractsService.getContractByReservation(reservationId);
   }
