@@ -33,8 +33,20 @@ const AccountPage = () => {
     }
   };
 
-  const handleVerifyEmail = () => {
-    navigate('/verify-email');
+  const handleVerifyEmail = async () => {
+    try {
+      await axios.post(`${API_URL}/auth/resend-verification`, { email: user.email });
+      toast({
+        title: 'Email enviado',
+        description: 'Revisa tu correo y haz clic en el enlace para verificar tu email.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo enviar el email de verificación.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleVerifyIdentity = () => {

@@ -44,6 +44,7 @@ export class ContractsRepository {
 
   async updateSignatureFields(reservationId: number, fields: Partial<{ envelope_id: string, tenant_client_user_id: string, owner_client_user_id: string, signature_status: string, signed_pdf_url: string }>) {
     const supabase = this.supabaseService.getClient();
+    
     const { data, error } = await supabase
       .from('contracts')
       .update({ ...fields, updated_at: new Date().toISOString() })

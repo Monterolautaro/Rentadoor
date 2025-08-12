@@ -99,4 +99,24 @@ export class ReservationsController {
   async uploadDocument(@UploadedFile() file: Multer.File, @Req() req: any) {
     return { url: await this.reservationsService.uploadDocument(file, req.user.id) };
   }
+
+  @Post(':reservationId/co-earners')
+  async addCoEarner(
+    @Param('reservationId', ParseIntPipe) reservationId: number,
+    @Body() dto: {
+      full_name: string;
+      dni?: string;
+      cuit_cuil?: string;
+      income_source?: string;
+      employer_name?: string;
+      income_amount?: number;
+    }
+  ) {
+    return this.reservationsService.addCoEarner({ ...dto, reservation_id: reservationId });
+  }
+
+  @Get(':reservationId/co-earners')
+  async getCoEarners(@Param('reservationId', ParseIntPipe) reservationId: number) {
+    return this.reservationsService.getCoEarnersByReservation(reservationId);
+  }
 } 

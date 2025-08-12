@@ -365,8 +365,11 @@ const UserDashboardPage = () => {
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                    {!(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
-                      <Button size="xs" variant="outline" onClick={() => navigate(`/pagos/${reservation.id}`)}>
+                    {
+                    !(reservation.status === 'rechazada_admin' || reservation.status === 'rechazada_owner') && (
+                      <Button
+                      disabled={reservation.status !== 'aprobada'}
+                      size="xs" variant="outline" onClick={() => navigate(`/pagos/${reservation.id}`)}>
                         Ver pagos
                       </Button>
                     )}

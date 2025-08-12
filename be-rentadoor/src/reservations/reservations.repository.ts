@@ -9,7 +9,7 @@ export class ReservationsRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(createDto: CreateReservationDto): Promise<IReservation> {
-    // Validar conflictos de fechas antes de crear
+    
     const conflict = await this.findConflict(
       createDto.property_id,
       createDto.start_date,
@@ -116,6 +116,35 @@ export class ReservationsRepository {
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: false });
+    if (error) throw new BadRequestException(error.message);
+    return data || [];
+  }
+
+  async addCoEarner(coEarner: {
+    reservation_id: number;
+    full_name: string;
+    dni?: string;
+    cuit_cuil?: string;
+    income_source?: string;
+    employer_name?: string;
+    income_amount?: number;
+  }) {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('co_earners')
+      .insert(coEarner)
+      .select('*')
+      .single();
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  async getCoEarnersByReservation(reservation_id: number) {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('co_earners')
+      .select('*')
+      .eq('reservation_id', reservation_id);
     if (error) throw new BadRequestException(error.message);
     return data || [];
   }

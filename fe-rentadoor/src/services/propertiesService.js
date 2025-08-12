@@ -26,7 +26,7 @@ export const propertiesService = {
   // Obtener propiedades disponibles
   async getAvailableProperties() {
     try {
-      const response = await axios.get(`${API_URL}/properties/available`);
+      const response = await axios.get(`${API_URL}/properties/available`, {withCredentials: true});
       return response.data;
     } catch (error) {
       console.error('Error fetching available properties:', error);
@@ -34,10 +34,9 @@ export const propertiesService = {
     }
   },
 
-  // Obtener mis propiedades (requiere autenticación)
   async getMyProperties() {
     try {
-      const response = await axios.get(`${API_URL}/properties/my-properties`);
+      const response = await axios.get(`${API_URL}/properties/my-properties`, {withCredentials: true});
       return response.data;
     } catch (error) {
       console.error('Error fetching my properties:', error);
@@ -59,7 +58,7 @@ export const propertiesService = {
   // Crear nueva propiedad (requiere autenticación)
   async createProperty(propertyData) {
     try {
-      const response = await axios.post(`${API_URL}/properties`, propertyData);
+      const response = await axios.post(`${API_URL}/properties`, propertyData, {withCredentials: true});
       return response.data;
     } catch (error) {
       console.error('Error creating property:', error);
@@ -70,7 +69,7 @@ export const propertiesService = {
   // Actualizar propiedad (requiere autenticación)
   async updateProperty(id, propertyData) {
     try {
-      const response = await axios.patch(`${API_URL}/properties/${id}`, propertyData);
+      const response = await axios.patch(`${API_URL}/properties/${id}`, propertyData, {withCredentials: true});
       return response.data;
     } catch (error) {
       console.error('Error updating property:', error);

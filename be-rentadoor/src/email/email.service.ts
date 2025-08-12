@@ -1,12 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as sgMail from '@sendgrid/mail';
+import { SupabaseService } from 'src/supabase/supabase.service';
 
 @Injectable()
 export class EmailService {
   private readonly fromEmail: string;
   private readonly fromName: string;
 
-  constructor() {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+  ) {
     const apiKey = process.env.SENDGRID_API_KEY;
     this.fromEmail = process.env.SENDGRID_FROM_EMAIL || '';
     this.fromName = process.env.SENDGRID_FROM_NAME || 'Rentadoor';
@@ -46,5 +49,10 @@ export class EmailService {
       console.error(`Error sending email: ${error.response?.body || error.message}`);
       throw error;
     }
+  }
+
+  async getAdminEmails() {
+    const { data: admins } = await this.supabaseService.getClient().from('Users').select('email').eq('rol', 'admin');
+    return admins?.map(a => a.email).filter(Boolean) || [];
   }
 }

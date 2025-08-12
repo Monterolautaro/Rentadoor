@@ -43,4 +43,12 @@ export const reservationsService = {
     const res = await axios.get(`${API_URL}/reservations/owner/${ownerId}`, { withCredentials: true });
     return res.data;
   },
+  async addCoEarner(reservationId, data) {
+    const res = await axios.post(`${API_URL}/reservations/${reservationId}/co-earners`, data, { withCredentials: true });
+    return res.data;
+  },
+  async getCoEarners(reservationId) {
+    const res = await axios.get(`${API_URL}/reservations/${reservationId}/co-earners`, { withCredentials: true });
+    return res.data;
+  },
 }; 

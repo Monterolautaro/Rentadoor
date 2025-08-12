@@ -111,7 +111,7 @@ const AddPropertyPage = () => {
         bathrooms: parseInt(bathrooms),
         garages: parseInt(garages),
         approxM2: parseFloat(approxM2),
-        rental_period: parseInt(rentalPeriod),
+        rentalPeriod: parseInt(rentalPeriod),
         bedrooms: parseInt(environments > 1 ? environments - 1 : 1),
         allImages: imageUrls,
       };

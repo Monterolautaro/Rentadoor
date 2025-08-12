@@ -30,11 +30,11 @@ export class PropertiesController {
   ) {}
 
   @Post()
-  @RolesDecorator(Roles.ADMIN, Roles.USER)
   @UseGuards(AuthGuard, RolesGuard)
+  @RolesDecorator(Roles.ADMIN, Roles.USER)
   async create(@Body() createPropertyDto: CreatePropertyDto, @Req() req: IRequestWithUser) {
     const ownerId = parseInt(req.user.id);
-
+    
     const user = await this.userService.getUserById(ownerId);
     if (user.isSuspended) {
       throw new ForbiddenException('No puedes crear propiedades porque tu cuenta está suspendida.');

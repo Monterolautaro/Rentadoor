@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Shield, Users, FileText, CheckCircle, XCircle, Clock, Eye, Check, X, Building, Calendar, UserCheck, Trash2 } from 'lucide-react';
+import { Shield, Users, FileText, CheckCircle, XCircle, Clock, Eye, Check, X, Building, Calendar, UserCheck, Trash2, DollarSign } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import DevelopmentCard from '@/components/DevelopmentCard';
@@ -454,6 +454,7 @@ const AdminDashboardPage = () => {
                         <Eye className="w-4 h-4 mr-2" />Ver {file.file_name?.startsWith('selfie_') ? 'Selfie' : 'DNI'}
                       </Button>
                     ))}
+
                     {verification.status === 'pending' && (
                       <>
                         <Button size="sm" onClick={() => handleApprove(verification.userId)} className="bg-green-600 hover:bg-green-700"><Check className="w-4 h-4 mr-2" />Aprobar</Button>
@@ -493,6 +494,7 @@ const AdminDashboardPage = () => {
           const property = properties.find(p => p.id === reservation.property_id);
           const userObj = users.find(u => u.id === reservation.user_id);
           const ownerObj = users.find(u => u.id === reservation.owner_id);
+          const status = (reservation.status || '').toLowerCase().trim();
           return (
             <Card key={reservation.id} className="p-0 overflow-hidden shadow-md border border-slate-200 mb-6 rounded-xl">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-50 px-6 py-4 border-b">
@@ -520,24 +522,42 @@ const AdminDashboardPage = () => {
                   <div className="font-medium text-slate-700">{ownerObj ? `${ownerObj.nombre} (${ownerObj.email})` : reservation.owner_id}</div>
                   <Button size="xs" variant="outline" className="mt-2" onClick={() => { setSelectedOwner(ownerObj); setShowOwnerModal(true); }}>Ver Propietario</Button>
                 </div>
-                <div className="flex flex-row gap-2 justify-center items-center">
-                  {reservation.status !== 'rechazada_owner' && reservation.status !== 'rechazada_admin' && (
+                <div className="flex flex-col gap-2">
+                  {status === 'pendiente' && (
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        size="sm"
+                        className={`rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors bg-green-600 hover:bg-green-700 text-white`}
+                        onClick={() => approveAsAdmin(reservation.id)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" /> Aprobar
+                      </Button>
+                      <Button
+                        size="sm"
+                        className={`rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 transition-colors bg-red-600 hover:bg-red-700 text-white`}
+                        onClick={() => handleRejectReservation(reservation.id)}
+                      >
+                        <XCircle className="w-4 h-4 mr-1" /> Rechazar
+                      </Button>
+                    </div>
+                  )}
+                  {(reservation.status === 'preaprobada_admin' || reservation.status === 'aprobada') && (
                     <>
                       <div>
                         <div className="text-xs text-slate-500 mb-1">Pagos</div>
-                        <Button size="xs" variant="outline" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
-                          Ver pagos
+                        <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/admin/pagos/${reservation.id}`)}>
+                          <DollarSign className="w-4 h-4 mr-1" /> Ver pagos
                         </Button>
                       </div>
                       <div>
                         <div className="text-xs text-slate-500 mb-1">Contrato</div>
                         {reservation.contract_status === 'enviado' ? (
-                          <Button size="xs" variant="outline" onClick={() => navigate(`/contrato/${reservation.id}?admin=1`)}>
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/contrato/${reservation.id}?admin=1`)}>
                             <FileText className="mr-2 h-4 w-4" /> Ver contrato
                           </Button>
                         ) : (
-                          <Button size="xs" variant="outline" onClick={() => handleOpenContractModal(reservation.id)}>
-                            Enviar contrato
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => handleOpenContractModal(reservation.id)}>
+                            <FileText className="mr-2 h-4 w-4" /> Enviar contrato
                           </Button>
                         )}
                       </div>

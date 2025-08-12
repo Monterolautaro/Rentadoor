@@ -36,7 +36,6 @@ const EmailVerificationPage = () => {
         description: 'Tu email ha sido verificado exitosamente.',
       });
 
-      // Actualizar el usuario en localStorage si está logueado
       const currentUser = localStorage.getItem('currentUser_rentadoor');
       if (currentUser) {
         const user = JSON.parse(currentUser);
@@ -45,7 +44,6 @@ const EmailVerificationPage = () => {
         window.dispatchEvent(new Event('currentUserChanged_rentadoor'));
       }
 
-      // Redirigir después de 2 segundos
       setTimeout(() => {
         navigate('/dashboard/propietario');
       }, 2000);

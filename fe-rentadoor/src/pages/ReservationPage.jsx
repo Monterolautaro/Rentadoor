@@ -166,7 +166,20 @@ const ReservationPage = () => {
         profession: profession,
         cuit_cuil: cuitCuil,
       };
-      await reservationsService.create(reservationPayload);
+      const reservation = await reservationsService.create(reservationPayload);
+      
+      if (reservation && reservation.id && additionalEarners.length > 0) {
+        for (const earner of additionalEarners) {
+          await reservationsService.addCoEarner(reservation.id, {
+            full_name: earner.fullName,
+            dni: earner.dni,
+            cuit_cuil: earner.cuitCuil,
+            income_source: earner.incomeSource,
+            employer_name: earner.employerName,
+            income_amount: Number(earner.income),
+          });
+        }
+      }
       toast({
         title: "¡Reserva Enviada!",
         description: "Tu solicitud está siendo pre-aprobada. Recibirás una respuesta en un máximo de 48 horas.",

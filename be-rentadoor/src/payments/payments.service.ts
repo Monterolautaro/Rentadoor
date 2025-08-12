@@ -9,10 +9,22 @@ export class PaymentsService {
     private readonly paymentsRepository: PaymentsRepository,
     private readonly emailService: EmailService,
     private readonly reservationsRepository: ReservationsRepository,
-  ) {}
+  ) { }
 
   async uploadPayment(file: any, reservationId: number, userId: number, type: string) {
-    return this.paymentsRepository.savePaymentFile(reservationId, userId, type, file);
+    const response = await this.paymentsRepository.savePaymentFile(reservationId, userId, type, file);
+
+    const adminEmails = await this.emailService.getAdminEmails();
+    for (const email of adminEmails) {
+      await this.emailService.sendMail(
+        email,
+        'Nueva pago recibido',
+        'Se ha creado un nuevo pago para la reserva.',
+        `<p>Se ha subido un nuevo comprobante de pago para la reserva ${reservationId}, del tipo ${type}. Revisa el panel de administración para más detalles.</p>`
+      );
+    }
+
+    return response;
   }
 
   async getPaymentsByReservation(reservationId: number) {
@@ -47,12 +59,12 @@ export class PaymentsService {
         </div>`
       );
     }
-   
+
     if (reservation && reservation.owner_id) {
-      
+
       const { data: owner, error } = await this.reservationsRepository['supabaseService'].getClient().from('Users').select('email, nombre, name').eq('id', reservation.owner_id).single();
       if (!error && owner && owner.email) {
-        const contractUrl = `${process.env.FRONTEND_URL || 'https://rentadoor.com'}/contrato/${reservationId}`;
+        const contractUrl = `${process.env.URL_FRONT}/contrato/${reservationId}`;
         const html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Contrato listo para firmar</h2>
