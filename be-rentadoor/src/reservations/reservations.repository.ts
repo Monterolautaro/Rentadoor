@@ -81,7 +81,7 @@ export class ReservationsRepository {
       .from('reservations')
       .select('*')
       .eq('property_id', propertyId)
-      .in('status', ['pendiente', 'preaprobada', 'aprobada'])
+      .in('status', ['pendiente', 'preaprobada_admin', 'aprobada'])
       .or(`start_date.lte.${end},end_date.gte.${start}`)
       .limit(1);
     if (error) throw new BadRequestException(error.message);

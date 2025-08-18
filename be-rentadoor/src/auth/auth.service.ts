@@ -55,7 +55,8 @@ export class AuthService {
                 phone: result.telefono,
                 role: result.rol,
                 isEmailVerified: result.isEmailVerified,
-                identityVerificationStatus: result.identityVerificationStatus || 'not_verified'
+                identityVerificationStatus: result.identityVerificationStatus || 'not_verified',
+                cvu: (result as any).cvu
             }
         };
     }
@@ -127,7 +128,8 @@ export class AuthService {
                 email: createdUser.email,
                 phone: createdUser.telefono,
                 role: createdUser.rol,
-                isEmailVerified: createdUser.isEmailVerified
+                isEmailVerified: createdUser.isEmailVerified,
+                cvu: (createdUser as any).cvu
             }
         };
     }
@@ -155,7 +157,8 @@ export class AuthService {
                 phone: user.telefono,
                 role: user.rol,
                 isEmailVerified: user.isEmailVerified,
-                identityVerificationStatus: user.identityVerificationStatus || 'not_verified'
+                identityVerificationStatus: user.identityVerificationStatus || 'not_verified',
+                cvu: (user as any).cvu
             };
         } catch (error) {
             throw new UnauthorizedException('Invalid token');

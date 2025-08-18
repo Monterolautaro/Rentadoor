@@ -53,6 +53,11 @@ const PropertyCard = ({ property }) => {
             alt={property.title}
             className="w-full h-48 object-cover"
           />
+          {property.status === 'Pre-Reservado' && (
+            <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-md text-xs font-semibold shadow">
+              Esta propiedad está siendo pre-reservada
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon"

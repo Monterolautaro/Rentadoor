@@ -186,14 +186,14 @@ export class StorageController {
     @RolesDecorator(Roles.ADMIN)
     @UseGuards(AuthGuard, RolesGuard)
     async getAllFiles() {
-        return await this.storageService.getEncryptedFiles(undefined, 'encrypted_files');
+        return await this.storageService.getVerificationFiles(undefined, 'encrypted_files');
     }
 
     @Get(':userId')
     @RolesDecorator(Roles.ADMIN)
     @UseGuards(AuthGuard, RolesGuard)
     async getUserFiles(@Param('userId') userId: string) {
-        return await this.storageService.getEncryptedFiles(userId, 'encrypted_files');
+        return await this.storageService.getVerificationFiles(userId, 'encrypted_files');
     }
 
     @Get('download/:fileId')

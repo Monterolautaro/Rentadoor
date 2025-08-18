@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +47,26 @@ const AdminDashboardPage = () => {
   const fileInputRef = useRef();
 
   const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
+
+  // Métricas calculadas
+  const propertyMetrics = useMemo(() => {
+    const total = properties.length;
+    const disponibles = properties.filter(p => p.status === 'Disponible').length;
+    const preReservadas = properties.filter(p => p.status === 'Pre-Reservado').length;
+    const reservadas = properties.filter(p => p.status === 'Reservado').length;
+    const activas = disponibles + preReservadas; 
+    return { total, disponibles, preReservadas, reservadas, activas };
+  }, [properties]);
+
+  const reservationMetrics = useMemo(() => {
+    const total = reservations.length;
+    const rechazadas = reservations.filter(r => r.status === 'rechazada_admin' || r.status === 'rechazada_owner').length;
+    const pendientes = reservations.filter(r => r.status === 'pendiente').length;
+    const preaprobadas = reservations.filter(r => r.status === 'preaprobada_admin').length;
+    const aprobadas = reservations.filter(r => r.status === 'aprobada').length;
+    const activas = reservations.filter(r => ['pendiente', 'preaprobada_admin', 'aprobada'].includes(r.status)).length;
+    return { total, rechazadas, pendientes, preaprobadas, aprobadas, activas };
+  }, [reservations]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -243,28 +263,31 @@ const AdminDashboardPage = () => {
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5" />Propiedades</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5" />Propiedades activas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-2xl font-bold text-slate-800">{properties.length}</p>
-              <p className="text-sm text-slate-600">Propiedades activas</p>
+              <p className="text-2xl font-bold text-slate-800">{propertyMetrics.activas}</p>
+              <p className="text-sm text-slate-600">Disponibles + Pre-reservadas</p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2"><Calendar className="h-5 w-5" />Reservas</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Calendar className="h-5 w-5" />Reservas totales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-2xl font-bold text-slate-800">{reservations.length}</p>
-              <p className="text-sm text-slate-600">Reservas totales</p>
+              <p className="text-2xl font-bold text-slate-800">{reservationMetrics.total}</p>
+              <p className="text-sm text-slate-600">Todas las reservas</p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2"><UserCheck className="h-5 w-5" />Verificaciones</CardTitle>
@@ -274,6 +297,84 @@ const AdminDashboardPage = () => {
               <p className="text-2xl font-bold text-slate-800">{verifications.filter(v => v.status === 'pending').length}</p>
               <p className="text-sm text-slate-600">Pendientes</p>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Propiedades disponibles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{propertyMetrics.disponibles}</p>
+            <p className="text-sm text-slate-600">Propiedades disponibles</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Pre-reservadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{propertyMetrics.preReservadas}</p>
+            <p className="text-sm text-slate-600">Propiedades aún no aprobadas por el propietario</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Propiedades reservadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{propertyMetrics.reservadas}</p>
+            <p className="text-sm text-slate-600">Propiedades aprobadas por el propietario</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Propiedades totales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{propertyMetrics.total}</p>
+            <p className="text-sm text-slate-600">Propiedades registradas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Reservas activas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{reservationMetrics.activas}</p>
+            <p className="text-sm text-slate-600">Pendientes + Preaprobadas + Aprobadas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Reservas pendientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{reservationMetrics.pendientes}</p>
+            <p className="text-sm text-slate-600">Por aprobar en administración</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Reservas preaprobadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{reservationMetrics.preaprobadas}</p>
+            <p className="text-sm text-slate-600">Aprobadas en administración</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Reservas rechazadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-slate-800">{reservationMetrics.rechazadas}</p>
+            <p className="text-sm text-slate-600">Reservas que fueron rechazadas</p>
           </CardContent>
         </Card>
       </div>
@@ -414,7 +515,7 @@ const AdminDashboardPage = () => {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Verificaciones Pendientes</CardTitle>
+          <CardTitle>Verificaciones</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -52,7 +52,7 @@ const HomePage = () => {
   // Actualizar propiedades filtradas cuando cambien las propiedades
   useEffect(() => {
     const normalizedProps = normalizeProperties(properties);
-    setFilteredProperties(normalizedProps.filter(p => p.status === "Disponible"));
+    setFilteredProperties(normalizedProps.filter(p => ["Disponible", "Pre-Reservado"].includes(p.status)));
   }, [properties]);
 
   const handleSearch = useCallback((filters) => {
@@ -72,7 +72,7 @@ const HomePage = () => {
     ? normalizeProperties(properties)
     : normalizeProperties(mockProperties);
 
-  const availableProperties = allProperties.filter(p => p.status === "Disponible");
+  const availableProperties = allProperties.filter(p => ["Disponible", "Pre-Reservado"].includes(p.status));
 
   return (
     <>

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 const paymentTypes = [
   { key: 'primer_mes', label: 'Primer mes' },
   { key: 'mes_deposito', label: 'Mes de depósito' },
-  { key: 'deposito', label: 'Depósito' },
+  { key: 'deposito', label: 'Mes de comisión' },
 ];
 
 const AdminPaymentsReviewPage = () => {
