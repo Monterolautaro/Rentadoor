@@ -186,4 +186,35 @@ export class PropertiesRepository {
 
     return data || [];
   }
+
+  async setStatusInternal(id: number, status: string): Promise<IProperty> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('properties')
+      .update({ status })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update property status: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async findAvailableForHome(): Promise<IProperty[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .in('status', ['Disponible', 'Pre-Reservado'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch available properties: ${error.message}`);
+    }
+
+    return data || [];
+  }
 } 

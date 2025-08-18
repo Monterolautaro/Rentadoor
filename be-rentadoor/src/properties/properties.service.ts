@@ -41,6 +41,10 @@ export class PropertiesService {
   }
 
   async getAvailableProperties(): Promise<IProperty[]> {
-    return this.propertiesRepository.searchProperties({ status: 'Disponible' });
+    return this.propertiesRepository.findAvailableForHome();
+  }
+
+  async setStatusInternal(id: number, status: string): Promise<IProperty> {
+    return this.propertiesRepository.setStatusInternal(id, status);
   }
 } 

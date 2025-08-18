@@ -10,5 +10,6 @@ export interface IUser {
     isEmailVerified: boolean,
     identityVerificationStatus?: string,
     isDeleted: boolean,
-    isSuspended: boolean
+    isSuspended: boolean,
+    cvu?: string
 }

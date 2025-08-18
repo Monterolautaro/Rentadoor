@@ -6,14 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { User, Mail, Shield, CheckCircle, AlertCircle, Edit, Key, LogOut, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { userService } from '@/services/userServce';
 import { useAuthContext } from '@/contexts/AuthContext';
 import axios from 'axios';
 
 const AccountPage = () => {
-  const { user, logout } = useAuthContext();
+  const { user, logout, checkAuth } = useAuthContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isRequestingPasswordReset, setIsRequestingPasswordReset] = useState(false);
+  const [cvu, setCvu] = useState(user?.cvu || "");
+  const [savingCvu, setSavingCvu] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL_DEV || 'http://localhost:3000';
 
@@ -96,6 +100,19 @@ const AccountPage = () => {
     });
   };
 
+  const handleSaveCvu = async () => {
+    try {
+      setSavingCvu(true);
+      await userService.updateMyCvu(cvu.trim());
+      toast({ title: 'CVU actualizado', description: 'Tu información bancaria fue guardada.' });
+      await checkAuth();
+    } catch (e) {
+      toast({ title: 'Error', description: 'No se pudo guardar el CVU.', variant: 'destructive' });
+    } finally {
+      setSavingCvu(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -147,6 +164,24 @@ const AccountPage = () => {
                     </Badge>
                   </p>
                 )}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-slate-600 font-semibold">CVU</label>
+                    {user?.cvu && (
+                      <span className="text-xs text-slate-500">Actual: <span className="font-mono text-slate-700">{user.cvu}</span></span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      placeholder="Ingresa tu CVU"
+                      value={cvu}
+                      onChange={(e) => setCvu(e.target.value)}
+                    />
+                    <Button variant="outline" onClick={handleSaveCvu} disabled={savingCvu || !cvu.trim()}>
+                      {savingCvu ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                  </div>
+                </div>
               </div>
               <Button variant="outline" className="w-full" onClick={handleEditInfo}>
                 <Edit className="h-4 w-4 mr-2" />
@@ -230,10 +265,14 @@ const AccountPage = () => {
                 <Key className="h-4 w-4 mr-2" />
                 {isRequestingPasswordReset ? 'Enviando...' : 'Cambiar Contraseña'}
               </Button>
-              <Button variant="outline" className="w-full">
-                <Shield className="h-4 w-4 mr-2" />
-                Configuración de Seguridad
-              </Button>
+              <div className="grid grid-cols-1 gap-2">
+                <Button variant="outline" className="w-full" onClick={() => navigate('/legal/politica-de-privacidad')}>
+                  Política de Privacidad
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/legal/terminos-y-condiciones')}>
+                  Términos y Condiciones
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

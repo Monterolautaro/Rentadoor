@@ -37,13 +37,13 @@ export class StorageService {
 
   async getEncryptedFiles(userId?: string, table: string = 'encrypted_files') {
     const files = await this.storageRepository.fetchFiles(userId, table);
-    const filesByUser = {};
+    const filesByUser: any = {};
     for (const file of files) {
-      const userId = file.user_id;
-      if (!filesByUser[userId]) {
-        const user = await this.authRepository.getUserById(parseInt(userId));
-        filesByUser[userId] = {
-          userId,
+      const uid = file.user_id;
+      if (!filesByUser[uid]) {
+        const user = await this.authRepository.getUserById(parseInt(uid));
+        filesByUser[uid] = {
+          userId: uid,
           user: user ? {
             id: user.id,
             name: user.nombre,
@@ -54,9 +54,36 @@ export class StorageService {
           status: user?.identityVerificationStatus || 'not_verified'
         };
       }
-      filesByUser[userId].files.push(file);
+      filesByUser[uid].files.push(file);
     }
     return Object.values(filesByUser);
+  }
+
+  
+  async getVerificationFiles(userId?: string, table: string = 'encrypted_files') {
+    const files = await this.storageRepository.fetchFiles(userId, table);
+    const onlyVerification = files.filter(f => typeof f.file_name === 'string' && (f.file_name.startsWith('selfie_') || f.file_name.startsWith('dni_')));
+    const filesByUser: any = {};
+    for (const file of onlyVerification) {
+      const uid = file.user_id;
+      if (!filesByUser[uid]) {
+        const user = await this.authRepository.getUserById(parseInt(uid));
+        filesByUser[uid] = {
+          userId: uid,
+          user: user ? {
+            id: user.id,
+            name: user.nombre,
+            email: user.email,
+            identityVerificationStatus: user.identityVerificationStatus || 'not_verified'
+          } : null,
+          files: [],
+          status: user?.identityVerificationStatus || 'not_verified'
+        };
+      }
+      filesByUser[uid].files.push(file);
+    }
+   
+    return Object.values(filesByUser).filter((g: any) => g.files && g.files.length > 0);
   }
 
   async downloadAndDecryptFile(fileId: string, table: string = 'encrypted_files', bucket: string = 'encrypted') {

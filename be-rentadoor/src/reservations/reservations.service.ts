@@ -6,6 +6,7 @@ import { IReservation } from './interfaces/reservation.interface';
 import { StorageService } from '../storage/storage.service';
 import { Multer } from 'multer';
 import { EmailService } from '../email/email.service';
+import { PropertiesService } from '../properties/properties.service';
 
 @Injectable()
 export class ReservationsService {
@@ -13,6 +14,7 @@ export class ReservationsService {
     private readonly reservationsRepository: ReservationsRepository,
     private readonly storageService: StorageService,
     private readonly emailService: EmailService,
+    private readonly propertiesService: PropertiesService,
   ) { }
 
   async create(createDto: CreateReservationDto, userId: number): Promise<IReservation> {
@@ -30,7 +32,14 @@ export class ReservationsService {
       );
     }
 
-    return this.reservationsRepository.create(createDto);
+    const reservation = await this.reservationsRepository.create(createDto);
+    
+    try {
+      await this.propertiesService.setStatusInternal(reservation.property_id, 'Pre-Reservado');
+    } catch (e) {
+      console.error('No se pudo actualizar estado de propiedad a Pre-Reservado', e);
+    }
+    return reservation;
   }
 
   async findById(id: number, userId: number, role: string): Promise<IReservation> {
@@ -84,7 +93,9 @@ export class ReservationsService {
       admin_preapproved: true,
       admin_preapproved_at: new Date().toISOString(),
     });
-    // Eliminado el envío de correo aquí
+   
+    try { await this.propertiesService.setStatusInternal(updated.property_id, 'Pre-Reservado'); } catch {}
+
     return updated;
   }
 
@@ -102,6 +113,9 @@ export class ReservationsService {
       owner_approved: true,
       owner_approved_at: new Date().toISOString(),
     });
+
+  
+    try { await this.propertiesService.setStatusInternal(updated.property_id, 'Reservado'); } catch {}
 
     const userEmail = await this.getUserEmailById(updated.user_id);
     const html = `
@@ -139,6 +153,9 @@ export class ReservationsService {
       owner_approved: false,
       owner_approved_at: new Date().toISOString(),
     });
+
+   
+    try { await this.propertiesService.setStatusInternal(updated.property_id, 'Disponible'); } catch {}
     const userEmail = await this.getUserEmailById(updated.user_id);
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

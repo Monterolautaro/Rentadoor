@@ -15,6 +15,8 @@ import IdentityVerificationPage from '@/pages/IdentityVerificationPage';
 import AccountPage from '@/pages/AccountPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import { Toaster } from '@/components/ui/toaster';
+import Footer from '@/components/Footer';
+import FloatingSupportButton from '@/components/FloatingSupportButton';
 import EmailConfirmationPage from '@/pages/EmailConfirmationPage';
 import EmailVerificationPage from '@/pages/EmailVerificationPage';
 import EmailVerificationRequiredPage from '@/pages/EmailVerificationRequiredPage';
@@ -23,6 +25,8 @@ import ReservationDocumentsPage from './pages/ReservationDocumentsPage';
 import ReservationPaymentsPage from '@/pages/ReservationPaymentsPage';
 import ContractViewPage from '@/pages/ContractViewPage';
 import AdminPaymentsReviewPage from '@/pages/AdminPaymentsReviewPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import TermsConditionsPage from '@/pages/TermsConditionsPage';
 
 const AppRoutes = () => {
   const { user, loading } = useAuthContext();
@@ -212,9 +216,13 @@ const AppRoutes = () => {
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/legal/politica-de-privacidad" element={<PrivacyPolicyPage />} />
+          <Route path="/legal/terminos-y-condiciones" element={<TermsConditionsPage />} />
         </Routes>
       </main>
       <Toaster />
+      <Footer />
+      <FloatingSupportButton />
     </div>
   );
 };

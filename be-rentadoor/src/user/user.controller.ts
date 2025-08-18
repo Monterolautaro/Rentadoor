@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpException, HttpStatus, NotFoundException, UnauthorizedException, UseGuards, Param, Patch, Delete, Put, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, HttpException, HttpStatus, NotFoundException, UnauthorizedException, UseGuards, Param, Patch, Delete, Put, Post, Req } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { RolesDecorator } from "src/common/decorators/roles.decorator";
 import { Roles } from "src/common/enums/roles.enum";
@@ -72,6 +72,17 @@ export class UserController {
     @UseGuards(AuthGuard, RolesGuard)
     async updateUser(@Param('id') id: number, @Body() update: Partial<IUser>) {
         return this.userService.updateUser(id, update);
+    }
+
+    @Patch('me/cvu')
+    @UseGuards(AuthGuard, RolesGuard)
+    @RolesDecorator(Roles.USER, Roles.ADMIN)
+    async updateMyCvu(@Req() req: any, @Body('cvu') cvu: string) {
+        if (!cvu || typeof cvu !== 'string') {
+            throw new BadRequestException('CVU inválido');
+        }
+        const userId = Number(req.user.id);
+        return this.userService.updateUser(userId, { cvu } as any);
     }
 
     @Patch(':id/suspend')

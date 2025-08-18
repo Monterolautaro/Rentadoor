@@ -9,5 +9,10 @@ export const userService = {
         const res = await axios.get(`${API_URL}/user/${id}`, { withCredentials: true });
 
         return res.data;
+    },
+
+    async updateMyCvu(cvu) {
+        const res = await axios.patch(`${API_URL}/user/me/cvu`, { cvu }, { withCredentials: true });
+        return res.data;
     }
 }

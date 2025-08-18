@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, FileText, PenTool, CheckCircle, XCircle, ChevronLeft, X, Trash2 } from 'lucide-react';
+import { UploadCloud, FileText, PenTool, CheckCircle, XCircle, ChevronLeft, X, Trash2, Copy } from 'lucide-react';
 import { paymentsService } from '@/services/paymentsService';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import ImageZoomModal from '@/components/ImageZoomModal';
 import HigherImage from '@/components/HigherImage';
@@ -10,7 +11,7 @@ import HigherImage from '@/components/HigherImage';
 const paymentTypes = [
   { key: 'primer_mes', label: 'Primer mes' },
   { key: 'mes_deposito', label: 'Mes de depósito' },
-  { key: 'deposito', label: 'Depósito' },
+  { key: 'deposito', label: 'Mes de comisión' },
 ];
 
 const ReservationPaymentsPage = () => {
@@ -25,6 +26,9 @@ const ReservationPaymentsPage = () => {
   const [modalImageSrc, setModalImageSrc] = useState(null);
   const [modalFileType, setModalFileType] = useState('image');
   const [modalObjectUrl, setModalObjectUrl] = useState(null);
+  const RENTADOOR_CVU = '1430001725044293310018';
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (reservationId) {
@@ -143,6 +147,36 @@ const ReservationPaymentsPage = () => {
           {globalStatus === 'aprobado' && <CheckCircle className="h-6 w-6 text-green-600" />}
           {globalStatus === 'rechazado' && <XCircle className="h-6 w-6 text-red-600" />}
           <span className={`font-bold text-lg ${statusColor[globalStatus]}`}>Estado: {globalStatus.charAt(0).toUpperCase() + globalStatus.slice(1)}</span>
+        </div>
+        <div className="mb-6 p-4 rounded-lg border border-slate-200 bg-slate-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-slate-500">CVU de Rentadoor</div>
+              <div className="text-lg font-semibold text-slate-800 tracking-wider">{RENTADOOR_CVU}</div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(RENTADOOR_CVU);
+                  setCopied(true);
+                  toast({ title: 'CVU copiado', description: 'Se copió al portapapeles.' });
+                  setTimeout(() => setCopied(false), 1500);
+                } catch {}
+              }}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" /> Copiado
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" /> Copiar
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         {globalStatus === 'rechazado' && (
           <div className="mb-4 text-red-600 text-sm">El pago fue rechazado. Por favor, vuelve a subir los comprobantes y contacta a soporte si tienes dudas.</div>

@@ -91,7 +91,7 @@ const ReservationDetailsModal = ({ reservation, property }) => {
           )}
         </div>
         <DialogFooter>
-          {user && reservation.owner_id === user.id && (
+          {user && reservation.owner_id === user.id | user.role === 'admin' && (
             <Button
               type="button"
               variant="outline"
